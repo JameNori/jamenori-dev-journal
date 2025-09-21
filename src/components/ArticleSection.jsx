@@ -4,6 +4,12 @@ import { BlogCard } from "./BlogCard";
 import { blogPosts } from "../data/blogpost";
 
 function ArticleSection() {
+  const categories = [
+    { name: "Highlight", isActive: true },
+    { name: "Cat", isActive: false },
+    { name: "Inspiration", isActive: false },
+    { name: "General", isActive: false },
+  ];
   return (
     <section className="bg-white py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -17,18 +23,18 @@ function ArticleSection() {
           <div className="flex items-center justify-between">
             {/* Category Filters */}
             <div className="flex items-center gap-6">
-              <button className="bg-[#DAD6D1] text-[#43403B] px-4 py-2 rounded-lg font-medium hover:bg-[#75716B] hover:text-white transition-colors">
-                Highlight
-              </button>
-              <button className="text-gray-600 hover:text-gray-800 transition-colors">
-                Cat
-              </button>
-              <button className="text-gray-600 hover:text-gray-800 transition-colors">
-                Inspiration
-              </button>
-              <button className="text-gray-600 hover:text-gray-800 transition-colors">
-                General
-              </button>
+              {categories.map((category, index) => (
+                <button
+                  key={index}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    category.isActive
+                      ? "bg-[#DAD6D1] text-[#43403B] hover:bg-[#75716B] hover:text-white"
+                      : "text-gray-600 hover:text-gray-800"
+                  }`}
+                >
+                  {category.name}
+                </button>
+              ))}
             </div>
 
             {/* Search Bar */}
@@ -53,64 +59,28 @@ function ArticleSection() {
               Category
             </label>
             <select className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent">
-              <option value="highlight">Highlight</option>
-              <option value="cat">Cat</option>
-              <option value="inspiration">Inspiration</option>
-              <option value="general">General</option>
+              {categories.map((category, index) => (
+                <option key={index} value={category.name.toLowerCase()}>
+                  {category.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
 
         {/* Blog Cards Grid */}
         <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
-          <BlogCard
-            image={blogPosts[0].image}
-            category={blogPosts[0].category}
-            title={blogPosts[0].title}
-            description={blogPosts[0].description}
-            author={blogPosts[0].author}
-            date={blogPosts[0].date}
-          />
-          <BlogCard
-            image={blogPosts[1].image}
-            category={blogPosts[1].category}
-            title={blogPosts[1].title}
-            description={blogPosts[1].description}
-            author={blogPosts[1].author}
-            date={blogPosts[1].date}
-          />
-          <BlogCard
-            image={blogPosts[2].image}
-            category={blogPosts[2].category}
-            title={blogPosts[2].title}
-            description={blogPosts[2].description}
-            author={blogPosts[2].author}
-            date={blogPosts[2].date}
-          />
-          <BlogCard
-            image={blogPosts[3].image}
-            category={blogPosts[3].category}
-            title={blogPosts[3].title}
-            description={blogPosts[3].description}
-            author={blogPosts[3].author}
-            date={blogPosts[3].date}
-          />
-          <BlogCard
-            image={blogPosts[4].image}
-            category={blogPosts[4].category}
-            title={blogPosts[4].title}
-            description={blogPosts[4].description}
-            author={blogPosts[4].author}
-            date={blogPosts[4].date}
-          />
-          <BlogCard
-            image={blogPosts[5].image}
-            category={blogPosts[5].category}
-            title={blogPosts[5].title}
-            description={blogPosts[5].description}
-            author={blogPosts[5].author}
-            date={blogPosts[5].date}
-          />
+          {blogPosts.slice(0, 6).map((post) => (
+            <BlogCard
+              key={post.id}
+              image={post.image}
+              category={post.category}
+              title={post.title}
+              description={post.description}
+              author={post.author}
+              date={post.date}
+            />
+          ))}
         </div>
       </div>
     </section>
