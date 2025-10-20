@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "./ui/select";
 
-
 function ArticleSection() {
   const [selectedCategory, setSelectedCategory] = useState("Highlight");
 
@@ -22,25 +21,25 @@ function ArticleSection() {
     { name: "General", isActive: false },
   ];
   return (
-    <section className="bg-white py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-12 bg-brown-100">
+      <div className="mx-auto px-4 lg:max-w-8xl lg:px-[120px]">
         {/* Title */}
-        <h2 className="text-3xl font-bold text-gray-800 mb-8">
+        <h2 className="mb-8 font-poppins text-2xl font-semibold leading-8 text-brown-600 lg:mb-12">
           Latest articles
         </h2>
 
         {/* Desktop Layout - Horizontal */}
-        <div className="hidden lg:block bg-[#EFEEEB] rounded-lg p-6">
+        <div className="hidden rounded-2xl px-6 py-4 bg-brown-200 lg:block">
           <div className="flex items-center justify-between">
             {/* Category Filters */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
               {categories.map((category, index) => (
                 <button
                   key={index}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  className={`rounded-lg px-5 py-3 font-poppins text-base font-medium leading-6 transition-colors ${
                     selectedCategory === category.name
-                      ? "bg-[#DAD6D1] text-[#43403B] cursor-not-allowed" // สีเมื่อถูกเลือก + disabled
-                      : "text-gray-600 hover:text-gray-800 hover:bg-gray-100" // สีเมื่อไม่ถูกเลือก + hover
+                      ? "cursor-not-allowed bg-brown-300 text-brown-500" // สีเมื่อถูกเลือก + disabled
+                      : "cursor-pointer text-brown-400 hover:bg-brown-100 hover:text-brown-600" // สีเมื่อไม่ถูกเลือก + hover
                   }`}
                   disabled={selectedCategory === category.name} // ปิดการคลิกปุ่มที่ถูกเลือก
                   onClick={() => setSelectedCategory(category.name)} // เปลี่ยน state เมื่อคลิก
@@ -52,18 +51,26 @@ function ArticleSection() {
 
             {/* Search Bar */}
             <div className="relative w-80">
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input type="text" placeholder="Search" className="pr-10" />
+              <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-brown-400" />
+              <Input
+                type="text"
+                placeholder="Search"
+                className="pr-10 font-poppins text-base font-medium leading-6 text-brown-500 placeholder:text-brown-400"
+              />
             </div>
           </div>
         </div>
 
         {/* Mobile Layout - Vertical */}
-        <div className="lg:hidden space-y-4 bg-[#EFEEEB] rounded-lg p-6">
+        <div className="space-y-4 rounded-2xl px-6 py-4 bg-brown-200 lg:hidden">
           {/* Search Bar */}
           <div className="relative">
-            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input type="text" placeholder="Search" className="w-full pr-10" />
+            <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-brown-400" />
+            <Input
+              type="text"
+              placeholder="Search"
+              className="w-full pr-10 font-poppins text-base font-medium leading-6 text-brown-500 placeholder:text-brown-400"
+            />
           </div>
 
           {/* Category Select */}
@@ -71,13 +78,20 @@ function ArticleSection() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Category
             </label>
-            <Select onValueChange={(value) => setSelectedCategory(value)}>
-              <SelectTrigger className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent">
-                <SelectValue placeholder="Select a category" />
+            <Select
+              value={selectedCategory}
+              onValueChange={(value) => setSelectedCategory(value)}
+            >
+              <SelectTrigger className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 font-poppins text-base font-medium leading-6 text-brown-400 focus:ring-2 focus:ring-gray-500">
+                <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="border-brown-300 bg-white">
                 {categories.map((category, index) => (
-                  <SelectItem key={index} value={category.name}>
+                  <SelectItem
+                    key={index}
+                    value={category.name}
+                    className="font-poppins text-base font-medium leading-6 text-brown-400 hover:bg-brown-100 focus:bg-brown-100"
+                  >
                     {category.name}
                   </SelectItem>
                 ))}
@@ -87,7 +101,7 @@ function ArticleSection() {
         </div>
 
         {/* Blog Cards Grid */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-6 lg:gap-8">
           {blogPosts
             .filter(
               (post) =>
