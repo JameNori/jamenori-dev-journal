@@ -1,33 +1,40 @@
 export function BlogCard(props) {
   const { image, category, title, description, author, date } = props;
   return (
-    <div className="flex flex-col gap-4">
-      <a href="#" className="relative h-[212px] sm:h-[360px]">
+    <div className="flex flex-col gap-5">
+      <a
+        href="#"
+        className="relative h-[212px] w-full lg:h-[360px] lg:w-[590px]"
+      >
         <img
-          className="w-full h-full object-cover rounded-md"
+          className="h-full w-full rounded-2xl object-cover"
           src={image}
           alt={title}
         />
       </a>
       <div className="flex flex-col">
         <div className="flex">
-          <span className="bg-green-200 rounded-full px-3 py-1 text-sm font-semibold text-green-600 mb-2">
+          <span className="mb-2 rounded-full bg-green-light px-3 py-1 font-poppins text-sm font-medium leading-[22px] text-green">
             {category}
           </span>
         </div>
         <a href="#">
-          <h2 className="text-start font-bold text-xl mb-2 line-clamp-2 hover:underline">
+          <h2 className="mb-2 line-clamp-2 font-poppins text-xl font-semibold leading-7 text-brown-600 hover:underline">
             {title}
           </h2>
         </a>
-        <p className="text-muted-foreground text-sm mb-4 flex-grow line-clamp-3">
+        <p className="mb-4 flex-grow line-clamp-3 font-poppins text-sm font-medium leading-[22px] text-brown-400">
           {description}
         </p>
         <div className="flex items-center text-sm">
-          <img className="w-8 h-8 rounded-full mr-2" src={image} alt={author} />
-          <span>{author}</span>
+          <img className="mr-2 h-8 w-8 rounded-full" src={image} alt={author} />
+          <span className="font-poppins text-sm font-medium leading-[22px] text-brown-500">
+            {author}
+          </span>
           <span className="mx-2 text-gray-300">|</span>
-          <span>{date}</span>
+          <span className="font-poppins text-sm font-medium leading-[22px] text-brown-400">
+            {date}
+          </span>
         </div>
       </div>
     </div>
