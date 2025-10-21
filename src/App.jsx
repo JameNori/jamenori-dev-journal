@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Toaster } from "sonner";
 
 // Pages
 import LandingPage from "./pages/LandingPage";
@@ -14,6 +15,7 @@ function App() {
           <Route path="/post/:postId" element={<ViewPostPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
+        <Toaster />
       </div>
     </Router>
   );
