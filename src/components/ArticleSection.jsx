@@ -15,7 +15,10 @@ function ArticleSection() {
   const [selectedCategory, setSelectedCategory] = useState("Highlight");
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
   const categories = [
     { name: "Highlight", isActive: true },
@@ -25,14 +28,24 @@ function ArticleSection() {
   ];
 
   // ฟังก์ชันสำหรับดึงข้อมูลจาก API
-  const fetchPosts = async (category = null) => {
+  const fetchPosts = async (
+    category = null,
+    pageNum = 1,
+    isLoadMore = false
+  ) => {
     try {
-      setLoading(true);
+      if (isLoadMore) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+        setPosts([]); // เคลียร์ posts เมื่อโหลดใหม่ (เปลี่ยน category)
+      }
+
       setError(null);
 
       const params = {
         limit: 6,
-        page: 1,
+        page: pageNum,
       };
 
       // เพิ่ม category parameter ถ้าไม่ใช่ "Highlight"
@@ -47,12 +60,26 @@ function ArticleSection() {
         }
       );
 
-      setPosts(response.data.posts);
+      if (isLoadMore) {
+        // รวมโพสต์ใหม่กับโพสต์เดิม
+        setPosts((prevPosts) => [...prevPosts, ...response.data.posts]);
+      } else {
+        // แทนที่โพสต์เดิม
+        setPosts(response.data.posts);
+      }
+
+      // ตรวจสอบว่าได้ข้อมูลหน้าสุดท้ายแล้วหรือยัง
+      if (response.data.currentPage >= response.data.totalPages) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
     } catch (err) {
       console.error("Error fetching posts:", err);
       setError("Failed to fetch posts");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -63,11 +90,19 @@ function ArticleSection() {
 
   // ดึงข้อมูลใหม่เมื่อเปลี่ยน category
   useEffect(() => {
-    fetchPosts(selectedCategory);
+    setPage(1); // รีเซ็ตหน้าเป็น 1
+    setHasMore(true); // รีเซ็ต hasMore
+    fetchPosts(selectedCategory, 1);
   }, [selectedCategory]);
 
   const handleCategoryChange = (categoryName) => {
     setSelectedCategory(categoryName);
+  };
+
+  const handleLoadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchPosts(selectedCategory, nextPage, true); // true = isLoadMore
   };
 
   return (
@@ -165,20 +200,35 @@ function ArticleSection() {
         )}
 
         {/* Blog Cards Grid */}
-        {!loading && !error && (
-          <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-6 lg:gap-8">
-            {posts.map((post) => (
-              <BlogCard
-                key={post.id}
-                image={post.image}
-                category={post.category}
-                title={post.title}
-                description={post.description}
-                author={post.author}
-                date={post.date}
-              />
-            ))}
-          </div>
+        {!loading && !error && posts.length > 0 && (
+          <>
+            <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-6 lg:gap-8">
+              {posts.map((post) => (
+                <BlogCard
+                  key={post.id}
+                  image={post.image}
+                  category={post.category}
+                  title={post.title}
+                  description={post.description}
+                  author={post.author}
+                  date={post.date}
+                />
+              ))}
+            </div>
+
+            {/* View More Button */}
+            {hasMore && (
+              <div className="mt-12 text-center">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="font-poppins text-base font-medium leading-6 text-brown-600 underline transition-colors hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:no-underline"
+                >
+                  {loadingMore ? "Loading..." : "View more"}
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {/* Empty State */}
