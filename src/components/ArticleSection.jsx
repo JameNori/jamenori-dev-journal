@@ -1,6 +1,8 @@
 import { Search } from "lucide-react";
 import { Input } from "./ui/input";
 import { BlogCard } from "./BlogCard";
+import { SearchBar } from "./SearchBar";
+import { MobileSearchBar } from "./MobileSearchBar";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import {
@@ -134,29 +136,15 @@ function ArticleSection() {
               ))}
             </div>
 
-            {/* Search Bar */}
-            <div className="relative w-80">
-              <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-brown-400" />
-              <Input
-                type="text"
-                placeholder="Search"
-                className="pr-10 font-poppins text-base font-medium leading-6 text-brown-500 placeholder:text-brown-400"
-              />
-            </div>
+            {/* Search Bar - ใช้ SearchBar component ใหม่ */}
+            <SearchBar />
           </div>
         </div>
 
         {/* Mobile Layout - Vertical */}
         <div className="space-y-4 rounded-2xl px-6 py-4 bg-brown-200 lg:hidden">
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-brown-400" />
-            <Input
-              type="text"
-              placeholder="Search"
-              className="w-full pr-10 font-poppins text-base font-medium leading-6 text-brown-500 placeholder:text-brown-400"
-            />
-          </div>
+          {/* Search Bar - ใช้ MobileSearchBar component ใหม่ */}
+          <MobileSearchBar />
 
           {/* Category Select */}
           <div>
