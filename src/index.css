@@ -43,15 +43,21 @@
  * Markdown Styles
  * ====================== */
 .markdown {
+  font-family: "Poppins", sans-serif;
   font-size: 16px;
-  font-weight: 400;
+  font-weight: 500;
+  line-height: 24px;
+  color: #75716b;
 }
 
 .markdown :is(h2) {
   margin-top: 32px;
   margin-bottom: 12px;
+  font-family: "Poppins", sans-serif;
   font-size: 20px;
   font-weight: 600;
+  line-height: 28px;
+  color: #43403b;
 }
 
 .markdown :is(h3, h4, h5, h6) {
