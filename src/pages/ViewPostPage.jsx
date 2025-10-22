@@ -5,6 +5,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { NavBar } from "../components/NavBar";
 import { Footer } from "../components/Footer";
+import { LoginModal } from "../components/LoginModal";
 import { formatDate } from "../lib/utils";
 
 // Import SVG icons from assets
@@ -305,34 +306,20 @@ export default function ViewPostPage() {
       </main>
 
       {/* Login Modal */}
-      {showLoginModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md mx-4">
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={() => setShowLoginModal(false)}
-                className="text-brown-400 hover:text-brown-600"
-              >
-                ✕
-              </button>
-            </div>
-            <h2 className="font-poppins text-2xl font-bold text-brown-600 mb-6 text-center">
-              Create an account to continue
-            </h2>
-            <div className="space-y-4">
-              <button className="w-full bg-brown-600 text-white py-3 px-6 rounded-lg font-poppins font-medium hover:bg-brown-700 transition-colors">
-                Create account
-              </button>
-              <p className="text-center text-brown-400 font-poppins text-sm">
-                Already have an account?{" "}
-                <button className="underline hover:text-brown-600">
-                  Log in
-                </button>
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onCreateAccount={() => {
+          // Handle create account
+          console.log("Create account clicked");
+          setShowLoginModal(false);
+        }}
+        onLogin={() => {
+          // Handle login
+          console.log("Login clicked");
+          setShowLoginModal(false);
+        }}
+      />
 
       <Footer />
     </div>

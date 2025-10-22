@@ -15,18 +15,18 @@ export function Footer() {
             </span>
             <div className="flex items-center space-x-3">
               {/* LinkedIn Icon */}
-              <div className="flex  cursor-pointer items-center justify-center    ">
-                <LinkedinIcon className="h-6 w-6 text-brown-500"/>
+              <div className="flex cursor-pointer items-center justify-center">
+                <LinkedinIcon className="h-6 w-6 text-brown-500" />
               </div>
 
               {/* GitHub Icon */}
               <div className="flex cursor-pointer items-center justify-center">
-                <GithubIcon className="h-6 w-6 text-brown-500"/>
+                <GithubIcon className="h-6 w-6 text-brown-500" />
               </div>
 
               {/* Google Icon */}
               <div className="flex cursor-pointer items-center justify-center">
-                <GoogleIcon className="h-6 w-6 text-brown-500"/>
+                <GoogleIcon className="h-6 w-6 text-brown-500" />
               </div>
             </div>
           </div>
