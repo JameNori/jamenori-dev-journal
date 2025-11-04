@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export const LoginModal = ({ isOpen, onClose, onCreateAccount, onLogin }) => {
   if (!isOpen) return null;
 
@@ -24,21 +26,23 @@ export const LoginModal = ({ isOpen, onClose, onCreateAccount, onLogin }) => {
             continue
           </h2>
 
-          <button
+          <Link
+            to="/signup"
             onClick={onCreateAccount}
-            className="h-12 w-[207px] rounded-full bg-brown-600 px-10 py-3 font-poppins text-base font-medium leading-6 text-white transition-colors hover:bg-brown-700"
+            className="mx-auto flex h-12 w-[207px] items-center justify-center rounded-full bg-brown-600 px-10 py-3 font-poppins text-base font-medium leading-6 text-white transition-colors hover:bg-brown-700"
           >
             Create account
-          </button>
+          </Link>
 
-          <p className="font-poppins text-base font-medium leading-6 text-brown-400">
+          <p className="font-poppins text-base font-medium leading-6 text-brown-400 mt-8">
             Already have an account?{" "}
-            <button
+            <Link
+              to="/login"
               onClick={onLogin}
-              className="font-poppins text-base font-medium leading-6 underline transition-colors hover:text-brown-600"
+              className="font-poppins text-base font-medium leading-6 underline transition-colors text-brown-600"
             >
               Log in
-            </button>
+            </Link>
           </p>
         </div>
       </div>
