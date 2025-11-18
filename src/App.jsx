@@ -1,17 +1,33 @@
-import { NavBar } from "./components/NavBar";
-import { HeroSection } from "./components/HeroSection";
-import ArticleSection from "./components/ArticleSection";
-import { Footer } from "./components/Footer";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Toaster } from "sonner";
 
-// Main App Component
+// Pages
+import LandingPage from "./pages/LandingPage";
+import ViewPostPage from "./pages/ViewPostPage";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
+import SignupSuccessPage from "./pages/SignupSuccessPage";
+import ProfilePage from "./pages/ProfilePage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import NotFoundPage from "./pages/NotFoundPage";
+
 function App() {
   return (
-    <div className="min-h-screen bg-white">
-      <NavBar />
-      <HeroSection />
-      <ArticleSection />
-      <Footer />
-    </div>
+    <Router>
+      <div className="min-h-screen bg-white">
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/post/:postId" element={<ViewPostPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/signup/success" element={<SignupSuccessPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile/reset-password" element={<ResetPasswordPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+        <Toaster />
+      </div>
+    </Router>
   );
 }
 

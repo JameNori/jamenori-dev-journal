@@ -1,4 +1,7 @@
-import { Github, Linkedin } from "lucide-react";
+// Import SVG icon components
+import { LinkedinIcon } from "./icons/LinkedinIcon";
+import { GithubIcon } from "./icons/GithubIcon";
+import { GoogleIcon } from "./icons/GoogleIcon";
 
 export function Footer() {
   return (
@@ -12,18 +15,18 @@ export function Footer() {
             </span>
             <div className="flex items-center space-x-3">
               {/* LinkedIn Icon */}
-              <div className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-brown-500 transition-colors hover:bg-brown-400">
-                <Linkedin className="h-4 w-4 text-white" />
+              <div className="flex cursor-pointer items-center justify-center">
+                <LinkedinIcon className="h-6 w-6 text-brown-500" />
               </div>
 
               {/* GitHub Icon */}
-              <div className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-brown-500 transition-colors hover:bg-brown-400">
-                <Github className="h-4 w-4 text-white" />
+              <div className="flex cursor-pointer items-center justify-center">
+                <GithubIcon className="h-6 w-6 text-brown-500" />
               </div>
 
               {/* Google Icon */}
-              <div className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-brown-500 transition-colors hover:bg-brown-400">
-                <span className="font-bold text-lg text-white">G</span>
+              <div className="flex cursor-pointer items-center justify-center">
+                <GoogleIcon className="h-6 w-6 text-brown-500" />
               </div>
             </div>
           </div>
