@@ -7,6 +7,8 @@ import ViewPostPage from "./pages/ViewPostPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import SignupSuccessPage from "./pages/SignupSuccessPage";
+import ProfilePage from "./pages/ProfilePage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
 function App() {
@@ -19,6 +21,8 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/signup/success" element={<SignupSuccessPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile/reset-password" element={<ResetPasswordPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
         <Toaster />
