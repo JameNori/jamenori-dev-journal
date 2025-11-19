@@ -1,0 +1,17 @@
+import * as postService from '../services/post.service.js';
+
+export const createPost = async (req, res) => {
+  try {
+    await postService.createPost(req.body);
+
+    return res.status(201).json({
+      message: 'Created post sucessfully',
+    });
+  } catch (err) {
+    console.error('Error creating post:', err);
+
+    return res.status(500).json({
+      message: 'Server could not create post because database connection',
+    });
+  }
+};
