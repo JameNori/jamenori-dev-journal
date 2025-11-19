@@ -58,3 +58,27 @@ export const getPostById = async (req, res) => {
       });
     }
   };
+
+export const updatePost = async (req, res) => {
+    try {
+      const { postId } = req.params;
+  
+      const updated = await postService.updatePost(postId, req.body);
+  
+      if (!updated) {
+        return res.status(404).json({
+          message: "Server could not find a requested post to update",
+        });
+      }
+  
+      return res.status(200).json({
+        message: "Updated post sucessfully",
+      });
+    } catch (error) {
+      console.error("Error updating post:", error);
+  
+      return res.status(500).json({
+        message: "Server could not update post because database connection",
+      });
+    }
+  };

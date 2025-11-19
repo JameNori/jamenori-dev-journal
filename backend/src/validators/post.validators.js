@@ -36,6 +36,42 @@ export const createPostValidationRules = [
     .withMessage('status_id must be an integer'),
 ];
 
+export const updatePostValidationRules = [
+    body("title")
+      .trim()
+      .notEmpty()
+      .withMessage("Title is required"),
+  
+    body("image")
+      .optional()
+      .isString()
+      .withMessage("Image must be a string"),
+  
+    body("category_id")
+      .notEmpty()
+      .withMessage("category_id is required")
+      .bail()
+      .isInt()
+      .withMessage("category_id must be an integer"),
+  
+    body("description")
+      .trim()
+      .notEmpty()
+      .withMessage("Description is required"),
+  
+    body("content")
+      .trim()
+      .notEmpty()
+      .withMessage("Content is required"),
+  
+    body("status_id")
+      .notEmpty()
+      .withMessage("status_id is required")
+      .bail()
+      .isInt()
+      .withMessage("status_id must be an integer"),
+  ];
+  
 export const validateRequest = (req, res, next) => {
   const errors = validationResult(req);
 

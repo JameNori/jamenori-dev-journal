@@ -118,3 +118,39 @@ export async function getPostById(postId) {
 
   return result.rows[0];
 }
+
+export async function updatePost(postId, data) {
+  const { title, image, category_id, description, content, status_id } = data;
+
+  const query = `
+      UPDATE posts
+      SET 
+        title = $1,
+        image = $2,
+        category_id = $3,
+        description = $4,
+        content = $5,
+        status_id = $6
+      WHERE id = $7
+      RETURNING id;
+    `;
+
+  const values = [
+    title,
+    image,
+    Number(category_id),
+    description,
+    content,
+    Number(status_id),
+    Number(postId),
+  ];
+
+  const result = await db.query(query, values);
+
+  // ถ้าไม่มีแถวถูกอัปเดต = ไม่เจอ postId
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  return result.rows[0];
+}
