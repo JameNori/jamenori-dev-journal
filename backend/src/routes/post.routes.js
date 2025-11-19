@@ -24,4 +24,7 @@ router.put(
   updatePost
 );
 
+// Delete post
+router.delete("/posts/:postId", deletePost);
+
 export default router;

@@ -154,3 +154,20 @@ export async function updatePost(postId, data) {
 
   return result.rows[0];
 }
+
+export async function deletePost(postId) {
+    const query = `
+      DELETE FROM posts
+      WHERE id = $1
+      RETURNING id;
+    `;
+  
+    const result = await db.query(query, [postId]);
+  
+    // ถ้าไม่มี return → ไม่มีแถวถูกลบ = ไม่เจอ post
+    if (result.rows.length === 0) {
+      return null;
+    }
+  
+    return result.rows[0];
+  }
