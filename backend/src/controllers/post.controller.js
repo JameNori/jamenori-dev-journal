@@ -15,3 +15,24 @@ export const createPost = async (req, res) => {
     });
   }
 };
+
+export const getAllPosts = async (req, res) => {
+    try {
+      const { page, limit, category, keyword } = req.query;
+  
+      const data = await postService.getAllPosts({
+        page,
+        limit,
+        category,
+        keyword,
+      });
+  
+      return res.status(200).json(data);
+    } catch (error) {
+      console.error("Error reading posts:", error);
+  
+      return res.status(500).json({
+        message: "Server could not read post because database connection",
+      });
+    }
+  };
