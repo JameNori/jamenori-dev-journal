@@ -1,7 +1,14 @@
 import express from "express";
-import { createPost, getAllPosts } from "../controllers/post.controller.js";
+import {
+  createPost,
+  getAllPosts,
+  getPostById,
+  updatePost,
+  deletePost,
+} from "../controllers/post.controller.js";
 import {
   createPostValidationRules,
+  updatePostValidationRules,
   validateRequest,
 } from "../validators/post.validators.js";
 
