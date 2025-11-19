@@ -18,4 +18,7 @@ router.post(
 // Get all (pagination + filter + search)
 router.get("/posts", getAllPosts);
 
+// Get one post
+router.get("/posts/:postId", getPostById);
+
 export default router;

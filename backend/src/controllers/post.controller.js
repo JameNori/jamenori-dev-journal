@@ -36,3 +36,25 @@ export const getAllPosts = async (req, res) => {
       });
     }
   };
+
+export const getPostById = async (req, res) => {
+    try {
+      const { postId } = req.params;
+  
+      const post = await postService.getPostById(postId);
+  
+      if (!post) {
+        return res.status(404).json({
+          message: "Server could not find a requested post",
+        });
+      }
+  
+      return res.status(200).json(post);
+    } catch (error) {
+      console.error("Error reading post:", error);
+  
+      return res.status(500).json({
+        message: "Server could not read post because database connection",
+      });
+    }
+  };
