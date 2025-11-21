@@ -15,23 +15,23 @@ import {
 const router = express.Router();
 
 // Create
-router.post("/posts", createPostValidationRules, validateRequest, createPost);
+router.post("/", createPostValidationRules, validateRequest, createPost);
 
 // Get all (pagination + filter + search)
-router.get("/posts", getAllPosts);
+router.get("/", getAllPosts);
 
 // Get one post
-router.get("/posts/:postId", getPostById);
+router.get("/:postId", getPostById);
 
 // Update post
 router.put(
-  "/posts/:postId",
+  "/:postId",
   updatePostValidationRules,
   validateRequest,
   updatePost
 );
 
 // Delete post
-router.delete("/posts/:postId", deletePost);
+router.delete("/:postId", deletePost);
 
 export default router;
