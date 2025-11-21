@@ -1,11 +1,29 @@
 import * as postService from "../services/post.service.js";
 
+/**
+ * CREATE
+ * Endpoint: POST /posts
+ * Success: 201 + { message: "Created post successfully" }
+ * Fail:
+ *  - 400 ถ้าข้อมูลจาก client ไม่ครบ
+ *  - 500 ถ้า error จาก database
+ */
 export const createPost = async (req, res) => {
   try {
+    const { title, image, category_id, content, status_id } = req.body;
+
+    // เช็ก required fields
+    if (!title || !image || !category_id || !content || !status_id) {
+      return res.status(400).json({
+        message:
+          "Server could not create post because there are missing data from client",
+      });
+    }
+
     await postService.createPost(req.body);
 
     return res.status(201).json({
-      message: "Created post sucessfully",
+      message: "Created post successfully",
     });
   } catch (err) {
     console.error("Error creating post:", err);
@@ -16,6 +34,11 @@ export const createPost = async (req, res) => {
   }
 };
 
+/**
+ * READ (All)
+ * Endpoint: GET /posts
+ * รองรับ query: page, limit, category, keyword
+ */
 export const getAllPosts = async (req, res) => {
   try {
     const { page, limit, category, keyword } = req.query;
@@ -37,6 +60,12 @@ export const getAllPosts = async (req, res) => {
   }
 };
 
+/**
+ * READ (One)
+ * Endpoint: GET /posts/:postId
+ * Success: คืน object ของ post
+ * 404: ถ้าไม่เจอ post
+ */
 export const getPostById = async (req, res) => {
   try {
     const { postId } = req.params;
@@ -59,6 +88,12 @@ export const getPostById = async (req, res) => {
   }
 };
 
+/**
+ * UPDATE
+ * Endpoint: PUT /posts/:postId
+ * Success: 200 + { message: "Updated post successfully" }
+ * 404: ถ้าไม่เจอ post ให้แก้ไข
+ */
 export const updatePost = async (req, res) => {
   try {
     const { postId } = req.params;
@@ -72,7 +107,7 @@ export const updatePost = async (req, res) => {
     }
 
     return res.status(200).json({
-      message: "Updated post sucessfully",
+      message: "Updated post successfully",
     });
   } catch (error) {
     console.error("Error updating post:", error);
@@ -83,6 +118,12 @@ export const updatePost = async (req, res) => {
   }
 };
 
+/**
+ * DELETE
+ * Endpoint: DELETE /posts/:postId
+ * Success: 200 + { message: "Deleted post successfully" }
+ * 404: ถ้าไม่เจอ post ให้ลบ
+ */
 export const deletePost = async (req, res) => {
   try {
     const { postId } = req.params;
@@ -96,7 +137,7 @@ export const deletePost = async (req, res) => {
     }
 
     return res.status(200).json({
-      message: "Deleted post sucessfully",
+      message: "Deleted post successfully",
     });
   } catch (error) {
     console.error("Error deleting post:", error);
