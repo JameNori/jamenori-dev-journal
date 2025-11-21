@@ -1,23 +1,14 @@
-// src/db
-import pkg from 'pg';
-const { Pool } = pkg;
+import postgres from "postgres";
+import dotenv from "dotenv";
 
-// ใช้ environment variables
-const connectionString = process.env.DATABASE_URL;
+// โหลดตัวแปรจาก .env
+dotenv.config();
 
-// รองรับ Vercel (require SSL = true)
-const pool = new Pool({
-  connectionString,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+// สร้าง client หลักสำหรับคุยกับ Supabase Postgres
+// postgres() จะจัดการ connection pool ให้ในตัว
+const sql = postgres(process.env.DATABASE_URL, {
+  ssl: "require", // Supabase ต้องการ SSL เสมอ
 });
 
-// คำสั่ง query หลัก
-export const query = (text, params) => {
-  return pool.query(text, params);
-};
-
-export default {
-  query,
-};
+// export default เป็น instance ตัวเดียวใช้ทั้งโปรเจกต์
+export default sql;
