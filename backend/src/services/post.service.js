@@ -1,173 +1,202 @@
-import db from "../db/db.js";
+import sql from "../db/db.js";
 
+/**
+ * สร้างโพสต์ใหม่ในตาราง posts
+ * ใช้กับ endpoint: POST /posts
+ */
 export async function createPost(data) {
   const { title, image, category_id, description, content, status_id } = data;
 
-  const query = `
+  // ใช้ sql template literal เพื่อป้องกัน SQL injection
+  const result = await sql`
     INSERT INTO posts (title, image, category_id, description, content, status_id)
-    VALUES ($1, $2, $3, $4, $5, $6)
+    VALUES (
+      ${title},
+      ${image},
+      ${Number(category_id)},
+      ${description},
+      ${content},
+      ${Number(status_id)}
+    )
     RETURNING id;
   `;
 
-  const values = [
-    title,
-    image,
-    Number(category_id),
-    description,
-    content,
-    Number(status_id),
-  ];
-
-  const result = await db.query(query, values);
-
-  return result.rows[0];
+  // result เป็น array ของแถวที่ return มา (ไม่ใช่ result.rows แบบ pg)
+  return result[0]; // { id: ... }
 }
 
+/**
+ * ดึงรายการโพสต์ทั้งหมดแบบมี pagination + filter + keyword search
+ * ใช้กับ endpoint: GET /posts
+ * รองรับ query:
+ * - page    (default 1)
+ * - limit   (default 6)
+ * - category (optional, ใช้ category_id)
+ * - keyword (optional, ค้นหา title/description/content)
+ */
 export async function getAllPosts({ page = 1, limit = 6, category, keyword }) {
-  const offset = (page - 1) * limit;
+  // บังคับให้เป็น number
+  const pageNumber = Number(page) || 1;
+  const limitNumber = Number(limit) || 6;
+  const offset = (pageNumber - 1) * limitNumber;
 
-  let baseQuery = `
-      SELECT 
-        p.id,
-        p.title,
-        p.image,
-        p.description,
-        p.content,
-        p.category_id,
-        p.status_id,
-        p.date,
-        p.likes_count
-      FROM posts p
-    `;
-
-  let whereClauses = [];
-  let values = [];
-  let index = 1;
+  // เก็บเงื่อนไข WHERE เป็น array ของ sql fragment
+  const whereClauses = [];
 
   // Filter: category_id
   if (category) {
-    whereClauses.push(`p.category_id = $${index}`);
-    values.push(Number(category));
-    index++;
+    whereClauses.push(sql`p.category_id = ${Number(category)}`);
   }
 
-  // Search keyword in 3 fields
+  // Filter keyword: title / description / content (ILIKE)
   if (keyword) {
-    whereClauses.push(`
-        (p.title ILIKE $${index} 
-          OR p.description ILIKE $${index}
-          OR p.content ILIKE $${index})
-      `);
-    values.push(`%${keyword}%`);
-    index++;
+    const pattern = `%${keyword}%`;
+    whereClauses.push(
+      sql`(
+        p.title ILIKE ${pattern} OR
+        p.description ILIKE ${pattern} OR
+        p.content ILIKE ${pattern}
+      )`
+    );
   }
 
-  // Combine WHERE
-  if (whereClauses.length > 0) {
-    baseQuery += " WHERE " + whereClauses.join(" AND ");
-  }
+  // ประกอบ WHERE ถ้ามีเงื่อนไข
+  const whereSQL =
+    whereClauses.length > 0
+      ? sql`WHERE ${sql.join(whereClauses, sql` AND `)}`
+      : sql``;
 
-  // Count posts
-  const countQuery = `
-      SELECT COUNT(*) AS total 
-      FROM posts p
-      ${whereClauses.length > 0 ? "WHERE " + whereClauses.join(" AND ") : ""}
-    `;
+  // นับจำนวนโพสต์ทั้งหมดตามเงื่อนไข (ใช้สำหรับ totalPages)
+  const countResult = await sql`
+    SELECT COUNT(*)::INT AS total
+    FROM posts p
+    ${whereSQL}
+  `;
+  const totalPosts = countResult[0]?.total ?? 0;
+  const totalPages = Math.ceil(totalPosts / limitNumber) || 1;
 
-  const countResult = await db.query(countQuery, values);
-  const totalPosts = Number(countResult.rows[0].total);
-  const totalPages = Math.ceil(totalPosts / limit);
-
-  // Add ordering + pagination
-  baseQuery += ` ORDER BY p.id DESC LIMIT ${limit} OFFSET ${offset}`;
-
-  const result = await db.query(baseQuery, values);
+  // ดึงข้อมูลโพสต์จริง ตามหน้า + limit
+  // (ยังคงเลือก field เดิมเหมือน code เดิมของคุณ)
+  const posts = await sql`
+    SELECT
+      p.id,
+      p.title,
+      p.image,
+      p.description,
+      p.content,
+      p.category_id,
+      p.status_id,
+      p.date,
+      p.likes_count
+    FROM posts p
+    ${whereSQL}
+    ORDER BY p.id DESC
+    LIMIT ${limitNumber} OFFSET ${offset}
+  `;
 
   return {
     totalPosts,
     totalPages,
-    currentPage: Number(page),
-    limit: Number(limit),
-    nextPage: page < totalPages ? Number(page) + 1 : null,
-    posts: result.rows,
+    currentPage: pageNumber,
+    limit: limitNumber,
+    nextPage: pageNumber < totalPages ? pageNumber + 1 : null,
+    posts,
   };
 }
 
+/**
+ * ดึงโพสต์ตาม id หนึ่งตัว
+ * ใช้กับ endpoint: GET /posts/:postId
+ * Requirement :
+ * - category เป็นชื่อหมวดหมู่ (เช่น "Cat")
+ * - status เป็น string ("draft" / "publish")
+ */
 export async function getPostById(postId) {
-  const query = `
-      SELECT 
-        p.id,
-        p.title,
-        p.image,
-        p.description,
-        p.content,
-        p.category_id,
-        p.status_id,
-        p.date,
-        p.likes_count
-      FROM posts p
-      WHERE p.id = $1
-      LIMIT 1;
-    `;
+  const id = Number(postId);
 
-  const result = await db.query(query, [postId]);
+  const result = await sql`
+    SELECT 
+      p.id,
+      p.image,
+      c.name AS category,
+      p.title,
+      p.description,
+      p.date,
+      p.content,
+      s.status,
+      p.likes_count
+    FROM posts p
+    LEFT JOIN categories c ON p.category_id = c.id
+    LEFT JOIN statuses s ON p.status_id = s.id
+    WHERE p.id = ${id}
+    LIMIT 1;
+  `;
 
-  if (result.rows.length === 0) {
-    return null; // ให้ controller ตรวจว่าไม่มีข้อมูล
+  if (result.length === 0) {
+    return null; // ให้ controller ไปส่ง 404
   }
 
-  return result.rows[0];
+  // คืนค่าให้ field
+  const row = result[0];
+  return {
+    id: row.id,
+    image: row.image,
+    category: row.category,
+    title: row.title,
+    description: row.description,
+    date: row.date,
+    content: row.content,
+    status: row.status,
+    likes_count: row.likes_count,
+  };
 }
 
+/**
+ * แก้ไขโพสต์เดิม
+ * ใช้กับ endpoint: PUT /posts/:postId
+ */
 export async function updatePost(postId, data) {
   const { title, image, category_id, description, content, status_id } = data;
+  const id = Number(postId);
 
-  const query = `
-      UPDATE posts
-      SET 
-        title = $1,
-        image = $2,
-        category_id = $3,
-        description = $4,
-        content = $5,
-        status_id = $6
-      WHERE id = $7
-      RETURNING id;
-    `;
-
-  const values = [
-    title,
-    image,
-    Number(category_id),
-    description,
-    content,
-    Number(status_id),
-    Number(postId),
-  ];
-
-  const result = await db.query(query, values);
+  const result = await sql`
+    UPDATE posts
+    SET
+      title = ${title},
+      image = ${image},
+      category_id = ${Number(category_id)},
+      description = ${description},
+      content = ${content},
+      status_id = ${Number(status_id)}
+    WHERE id = ${id}
+    RETURNING id;
+  `;
 
   // ถ้าไม่มีแถวถูกอัปเดต = ไม่เจอ postId
-  if (result.rows.length === 0) {
+  if (result.length === 0) {
     return null;
   }
 
-  return result.rows[0];
+  return result[0]; // { id: ... }
 }
 
+/**
+ * ลบโพสต์
+ * ใช้กับ endpoint: DELETE /posts/:postId
+ */
 export async function deletePost(postId) {
-    const query = `
-      DELETE FROM posts
-      WHERE id = $1
-      RETURNING id;
-    `;
-  
-    const result = await db.query(query, [postId]);
-  
-    // ถ้าไม่มี return → ไม่มีแถวถูกลบ = ไม่เจอ post
-    if (result.rows.length === 0) {
-      return null;
-    }
-  
-    return result.rows[0];
+  const id = Number(postId);
+
+  const result = await sql`
+    DELETE FROM posts
+    WHERE id = ${id}
+    RETURNING id;
+  `;
+
+  // ถ้าไม่มีแถวถูกลบ = ไม่เจอ post
+  if (result.length === 0) {
+    return null;
   }
+
+  return result[0]; // { id: ... }
+}
