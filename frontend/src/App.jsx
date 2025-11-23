@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import LandingPage from "./pages/LandingPage";
 import ViewPostPage from "./pages/ViewPostPage";
 import LoginPage from "./pages/LoginPage";
+import AdminLoginPage from "./pages/AdminLoginPage";
 import SignupPage from "./pages/SignupPage";
 import SignupSuccessPage from "./pages/SignupSuccessPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -19,10 +20,14 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/post/:postId" element={<ViewPostPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/signup/success" element={<SignupSuccessPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/profile/reset-password" element={<ResetPasswordPage />} />
+          <Route
+            path="/profile/reset-password"
+            element={<ResetPasswordPage />}
+          />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
         <Toaster />
