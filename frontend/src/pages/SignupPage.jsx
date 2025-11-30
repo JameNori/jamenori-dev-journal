@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { NavBar } from "../components/NavBar";
 import { Footer } from "../components/Footer";
 import { FormInput } from "../components/ui/FormInput";
+import { authService } from "../services/auth.service.js";
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -73,14 +74,13 @@ export default function SignupPage() {
     setErrors({});
 
     try {
-      // TODO: Add actual signup API call here
-      console.log("Sign up form submitted:", formData);
-
-      // Simulate API call
-      // const response = await axios.post('/api/signup', formData);
-
-      // For testing: Simulate success after 1 second
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // เรียก API register
+      await authService.register({
+        email: formData.email,
+        password: formData.password,
+        username: formData.username,
+        name: formData.name,
+      });
 
       // Success - redirect to success page
       navigate("/signup/success");
@@ -89,12 +89,11 @@ export default function SignupPage() {
 
       // Check if error is from API response
       const errorMessage =
-        error?.response?.data?.message ||
         error?.response?.data?.error ||
         error?.message ||
-        "";
+        "Something went wrong. Please try again.";
 
-      // Check if it's an email already taken error
+      // Check if it's an email/username already taken error
       const emailErrorKeywords = [
         "email",
         "already",
@@ -102,19 +101,29 @@ export default function SignupPage() {
         "exists",
         "duplicate",
       ];
+      const usernameErrorKeywords = ["username", "already", "taken"];
+
       const isEmailError = emailErrorKeywords.some((keyword) =>
+        errorMessage.toLowerCase().includes(keyword.toLowerCase())
+      );
+      const isUsernameError = usernameErrorKeywords.some((keyword) =>
         errorMessage.toLowerCase().includes(keyword.toLowerCase())
       );
 
       if (isEmailError) {
         // Show inline error for email field
         setErrors({
-          email: "Email is already taken, Please try another email.",
+          email: "Email is already taken. Please try another email.",
+        });
+      } else if (isUsernameError) {
+        // Show inline error for username field
+        setErrors({
+          username: "Username is already taken. Please try another username.",
         });
       } else {
         // Show general error message
         setErrors({
-          submit: "Something went wrong. Please try again.",
+          submit: errorMessage,
         });
       }
     } finally {
