@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 
 import profileRoutes from "./routes/profile.routes.js";
 import postRoutes from "./routes/post.routes.js";
+import authRoutes from "./routes/auth.routes.js";
 import sql from "./db/db.js";
 
 // Load environment variables
@@ -19,6 +20,9 @@ app.use(express.json());
 app.get("/", (req, res) => {
   res.send("Backend server is running!");
 });
+
+// Auth routes
+app.use("/auth", authRoutes);
 
 // Profile routes
 app.use("/profiles", profileRoutes);
@@ -46,5 +50,3 @@ app.get("/test-db", async (req, res) => {
 });
 
 export default app;
-
-
