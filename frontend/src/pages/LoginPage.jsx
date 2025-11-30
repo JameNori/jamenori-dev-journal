@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { NavBar } from "../components/NavBar";
 import { Footer } from "../components/Footer";
 import { FormInput } from "../components/ui/FormInput";
 import { ErrorPopup } from "../components/ui/ErrorPopup";
+import { authService } from "../services/auth.service.js";
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -57,22 +59,28 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      // TODO: Add actual login API call here
-      console.log("Login form submitted:", formData);
+      // เรียก API login
+      await authService.login(formData.email, formData.password);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Login สำเร็จ - ดึงข้อมูล user เพื่อเช็ค role
+      const userData = await authService.getCurrentUser();
 
-      // Simulate login failure for demonstration
-      // TODO: Remove this when implementing actual API call
-      throw new Error("Invalid credentials");
-
-      // Success - redirect to dashboard or home
-      // navigate("/");
+      // Redirect ตาม role
+      if (userData.role === "admin") {
+        navigate("/admin/article-management");
+      } else {
+        navigate("/");
+      }
     } catch (error) {
       console.error("Login error:", error);
+
+      // แสดง error จาก API
+      const errorMessage =
+        error?.response?.data?.error ||
+        "Your password is incorrect or this email doesn't exist";
+
       setErrors({
-        submit: "Your password is incorrect or this email doesn't exist",
+        submit: errorMessage,
         submitDescription: "Please try another password or email",
       });
     } finally {

@@ -4,6 +4,7 @@ import { ProfileSidebar } from "../components/ProfileSidebar";
 import { FormInput } from "../components/ui/FormInput";
 import { ProfileSuccessModal } from "../components/ui/ProfileSuccessModal";
 import { User } from "lucide-react";
+import { authService } from "../services/auth.service.js";
 
 export default function ResetPasswordPage() {
   // Mock data - จะเปลี่ยนเป็น API call เมื่อ Backend พร้อม
@@ -84,14 +85,11 @@ export default function ResetPasswordPage() {
     setIsSubmitting(true);
 
     try {
-      // TODO: Replace with actual API call
-      console.log("Password reset:", {
-        currentPassword: formData.currentPassword,
-        newPassword: formData.newPassword,
-      });
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // เรียก API reset password
+      await authService.resetPassword(
+        formData.currentPassword,
+        formData.newPassword
+      );
 
       // Show success modal
       setShowSuccessModal(true);
@@ -109,8 +107,13 @@ export default function ResetPasswordPage() {
       }, 5000);
     } catch (error) {
       console.error("Password reset error:", error);
+
+      const errorMessage =
+        error?.response?.data?.error ||
+        "Failed to reset password. Please try again.";
+
       setErrors({
-        submit: "Failed to reset password. Please try again.",
+        submit: errorMessage,
       });
     } finally {
       setIsSubmitting(false);

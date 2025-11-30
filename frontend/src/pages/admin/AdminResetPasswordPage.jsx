@@ -3,6 +3,7 @@ import { AdminNavBar } from "../../components/AdminNavBar";
 import { FormInput } from "../../components/ui/FormInput";
 import { ConfirmationModal } from "../../components/ui/ConfirmationModal";
 import { SuccessModal } from "../../components/ui/SuccessModal";
+import { authService } from "../../services/auth.service.js";
 
 export default function AdminResetPasswordPage() {
   const [formData, setFormData] = useState({
@@ -70,9 +71,11 @@ export default function AdminResetPasswordPage() {
     setIsSubmitting(true);
 
     try {
-      
-      console.log("Password reset:", formData);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // เรียก API reset password
+      await authService.resetPassword(
+        formData.currentPassword,
+        formData.newPassword
+      );
 
       // Show success modal
       setShowSuccessModal(true);
@@ -90,6 +93,14 @@ export default function AdminResetPasswordPage() {
       }, 5000);
     } catch (error) {
       console.error("Reset password error:", error);
+
+      const errorMessage =
+        error?.response?.data?.error ||
+        "Failed to reset password. Please try again.";
+
+      setErrors({
+        submit: errorMessage,
+      });
     } finally {
       setIsSubmitting(false);
     }

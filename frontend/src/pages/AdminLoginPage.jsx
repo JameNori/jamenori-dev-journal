@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FormInput } from "../components/ui/FormInput";
 import { ErrorPopup } from "../components/ui/ErrorPopup";
+import { authService } from "../services/auth.service.js";
 
 export default function AdminLoginPage() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -54,22 +57,33 @@ export default function AdminLoginPage() {
     setIsSubmitting(true);
 
     try {
-      // TODO: เพิ่มการเรียก API สำหรับ admin login ที่นี่
-      console.log("Admin login form submitted:", formData);
+      // เรียก API login
+      await authService.login(formData.email, formData.password);
 
-      // จำลองการเรียก API
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Login สำเร็จ - ดึงข้อมูล user เพื่อเช็ค role
+      const userData = await authService.getCurrentUser();
 
-      // จำลองการล็อกอินล้มเหลวเพื่อทดสอบ
-      // TODO: ลบส่วนนี้ออกเมื่อทำการเรียก API จริง
-      throw new Error("Invalid credentials");
+      // ตรวจสอบว่าเป็น admin หรือไม่
+      if (userData.role !== "admin") {
+        setErrors({
+          submit: "You do not have admin access",
+          submitDescription: "Please use a different account",
+        });
+        authService.logout(); // ลบ token
+        return;
+      }
 
-      // สำเร็จ - redirect ไปหน้า admin dashboard
-      // navigate("/admin/dashboard");
+      // Redirect ไปหน้า admin
+      navigate("/admin/article-management");
     } catch (error) {
       console.error("Admin login error:", error);
+
+      const errorMessage =
+        error?.response?.data?.error ||
+        "Your password is incorrect or this email doesn't exist";
+
       setErrors({
-        submit: "Your password is incorrect or this email doesn't exist",
+        submit: errorMessage,
         submitDescription: "Please try another password or email",
       });
     } finally {
