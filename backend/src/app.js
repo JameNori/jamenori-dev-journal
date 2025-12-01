@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import profileRoutes from "./routes/profile.routes.js";
 import postRoutes from "./routes/post.routes.js";
 import authRoutes from "./routes/auth.routes.js";
+import categoryRoutes from "./routes/category.routes.js";
 import sql from "./db/db.js";
 
 // Load environment variables
@@ -29,6 +30,9 @@ app.use("/profiles", profileRoutes);
 
 // Post routes
 app.use("/posts", postRoutes);
+
+// Category routes
+app.use("/categories", categoryRoutes);
 
 // ทดสอบการเชื่อมต่อฐานข้อมูล
 app.get("/test-db", async (req, res) => {
