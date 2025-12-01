@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AdminNavBar } from "../../components/AdminNavBar";
 import { ChevronDownIcon } from "../../components/icons/ChevronDownIcon";
@@ -7,17 +7,19 @@ import { TrashIcon } from "../../components/icons/TrashIcon";
 import { ConfirmationModal } from "../../components/ui/ConfirmationModal";
 import { AdminInput } from "../../components/ui/AdminInput";
 import { AdminTextarea } from "../../components/ui/AdminTextarea";
+import { ErrorPopup } from "../../components/ui/ErrorPopup";
+import { postService } from "../../services/post.service.js";
 
 export default function CreateArticlePage() {
   const navigate = useNavigate();
   const { articleId } = useParams();
   const isEditMode = !!articleId;
 
-  // หมายเหตุ:  ใช้ข้อมูล mock แทน
+  // หมายเหตุ: ตอนนี้ยังไม่ได้ใช้ข้อมูลที่มาจากฝั่ง backend
   const mockArticles = {
     1: {
       thumbnail: null,
-      category: "cat",
+      category_id: 1, // Cat
       authorName: "Thompson P.",
       title:
         "Understanding Cat Behavior: Why Your Feline Friend Acts the Way They Do",
@@ -28,17 +30,7 @@ export default function CreateArticlePage() {
     },
     2: {
       thumbnail: null,
-      category: "general",
-      authorName: "Thompson P.",
-      title: "The Art of Pet Care: Essential Tips for New Pet Owners",
-      introduction:
-        "Pet care is an essential part of being a responsible pet owner. Whether you have a cat, dog, or other companion, understanding their needs is crucial for their well-being.",
-      content:
-        "Taking care of a pet requires dedication, knowledge, and love. This guide covers the essential aspects of pet care, from nutrition to exercise and everything in between.\n\n1. Nutrition\n\nProviding proper nutrition is fundamental to your pet's health. Choose high-quality food that meets your pet's specific dietary needs.\n\n2. Exercise\n\nRegular exercise keeps pets healthy and happy. The amount and type of exercise depend on your pet's species, breed, and age.\n\n3. Veterinary Care\n\nRegular check-ups and vaccinations are essential for preventing diseases and ensuring your pet's long-term health.",
-    },
-    3: {
-      thumbnail: null,
-      category: "inspiration",
+      category_id: 2, // Inspiration
       authorName: "Thompson P.",
       title: "10 Inspiring Stories of Animal Rescue",
       introduction:
@@ -46,26 +38,45 @@ export default function CreateArticlePage() {
       content:
         "1. The Story of Hope\n\nHope was found abandoned in a parking lot, malnourished and scared. Through the dedication of rescue workers and a loving foster family, Hope transformed into a healthy, happy cat.\n\n2. A Second Chance\n\nMany animals face difficult circumstances, but with the right care and love, they can overcome incredible odds. These stories show that every animal deserves a chance at a better life.\n\n3. The Power of Community\n\nAnimal rescue often involves entire communities coming together to help animals in need. These collective efforts make a significant difference in the lives of countless animals.",
     },
+    3: {
+      thumbnail: null,
+      category_id: 3, // General
+      authorName: "Thompson P.",
+      title: "The Art of Pet Care: Essential Tips for New Pet Owners",
+      introduction:
+        "Pet care is an essential part of being a responsible pet owner. Whether you have a cat, dog, or other companion, understanding their needs is crucial for their well-being.",
+      content:
+        "Taking care of a pet requires dedication, knowledge, and love. This guide covers the essential aspects of pet care, from nutrition to exercise and everything in between.\n\n1. Nutrition\n\nProviding proper nutrition is fundamental to your pet's health. Choose high-quality food that meets your pet's specific dietary needs.\n\n2. Exercise\n\nRegular exercise keeps pets healthy and happy. The amount and type of exercise depend on your pet's species, breed, and age.\n\n3. Veterinary Care\n\nRegular check-ups and vaccinations are essential for preventing diseases and ensuring your pet's long-term health.",
+    },
   };
 
   const [formData, setFormData] = useState({
     thumbnail: null,
-    category: "",
+    category_id: "",
     authorName: "Thompson P.",
     title: "",
     introduction: "",
     content: "",
   });
 
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const fileInputRef = useRef(null);
 
   // Load article data when in edit mode
   useEffect(() => {
     if (isEditMode && articleId) {
-      // หมายเหตุ:  ใช้ข้อมูล mock แทน
+      // หมายเหตุ: ตอนนี้ยังไม่ได้ใช้ข้อมูลที่มาจากฝั่ง backend
       const article = mockArticles[articleId];
       if (article) {
         setFormData(article);
+        // ถ้ามี thumbnail URL ให้แสดง preview
+        if (article.thumbnail) {
+          setImagePreview(article.thumbnail);
+        }
       }
     }
   }, [articleId, isEditMode]);
@@ -74,57 +85,179 @@ export default function CreateArticlePage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSaveDraft = () => {
-    
-    console.log(isEditMode ? "Update as draft" : "Save as draft", formData);
+  // ฟังก์ชันสำหรับจัดการเมื่อมีการเลือกไฟล์
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
 
-    // Navigate with state to show modal on ArticleManagementPage
-    navigate("/admin/article-management", {
-      state: {
-        showModal: true,
-        modalTitle: isEditMode
-          ? "Article updated and saved as draft"
-          : "Create article and saved as draft",
-        modalDescription: "You can publish article later",
-      },
-    });
+    // ตรวจสอบประเภทของไฟล์
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+
+    if (!file) {
+      return;
+    }
+
+    if (!allowedTypes.includes(file.type)) {
+      setError("Please upload a valid image file (JPEG, PNG, GIF, WebP).");
+      return;
+    }
+
+    // ตรวจสอบขนาดของไฟล์ (5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      setError(
+        "The file is too large. Please upload an image smaller than 5MB."
+      );
+      return;
+    }
+
+    // เก็บข้อมูลไฟล์
+    setImageFile(file);
+    setError(null);
+
+    // สร้าง preview URL
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreview(previewUrl);
+  };
+
+  // ฟังก์ชันสำหรับลบรูปภาพ
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // ฟังก์ชันสำหรับบันทึกข้อมูลโพสต์
+  const handleSave = async (statusId) => {
+    // Validation
+    if (!formData.title.trim()) {
+      setError("Title is required");
+      return;
+    }
+    if (!formData.category_id) {
+      setError("Category is required");
+      return;
+    }
+    if (!formData.introduction.trim()) {
+      setError("Introduction is required");
+      return;
+    }
+    if (!formData.content.trim()) {
+      setError("Content is required");
+      return;
+    }
+
+    // ถ้าเป็น create mode ต้องมีรูปภาพ
+    if (!isEditMode && !imageFile) {
+      setError("Please select an image file.");
+      return;
+    }
+
+    // ถ้าเป็น edit mode แต่ไม่มีรูปภาพใหม่และไม่มีรูปภาพเดิม → error
+    if (isEditMode && !imageFile && !formData.thumbnail) {
+      setError("Please select an image file or keep the existing image.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // สร้าง FormData สำหรับการส่งข้อมูลแบบ multipart/form-data
+      const formDataToSend = new FormData();
+
+      // เพิ่มข้อมูลทั้งหมดลงใน FormData
+      formDataToSend.append("title", formData.title);
+      formDataToSend.append("category_id", formData.category_id.toString());
+      formDataToSend.append("description", formData.introduction);
+      formDataToSend.append("content", formData.content);
+      formDataToSend.append("status_id", statusId.toString());
+
+      // จัดการรูปภาพ
+      if (imageFile) {
+        // ถ้ามีไฟล์ใหม่ → ส่งไฟล์
+        formDataToSend.append("imageFile", imageFile);
+      } else if (formData.thumbnail) {
+        // ถ้าไม่มีไฟล์ใหม่ แต่มี URL เดิม (edit mode) → ส่ง URL
+        formDataToSend.append("image", formData.thumbnail);
+      }
+
+      // ส่งข้อมูลไปยัง Backend
+      if (isEditMode) {
+        await postService.updatePost(articleId, formDataToSend);
+      } else {
+        await postService.createPost(formDataToSend);
+      }
+
+      // Navigate with state to show modal on ArticleManagementPage
+      const statusText = statusId === 1 ? "draft" : "published";
+      navigate("/admin/article-management", {
+        state: {
+          showModal: true,
+          modalTitle: isEditMode
+            ? `Article updated and saved as ${statusText}`
+            : `Create article and saved as ${statusText}`,
+          modalDescription:
+            statusId === 1
+              ? "You can publish article later"
+              : "Your article has been successfully published",
+        },
+      });
+    } catch (error) {
+      console.error("Error saving post:", error);
+      setError(
+        error.response?.data?.message ||
+          "Failed to save post. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveDraft = () => {
+    handleSave(1); // status_id = 1 (draft)
   };
 
   const handleSaveAndPublish = () => {
-    
-    console.log(
-      isEditMode ? "Update and publish" : "Save and publish",
-      formData
-    );
-
-    // Navigate with state to show modal on ArticleManagementPage
-    navigate("/admin/article-management", {
-      state: {
-        showModal: true,
-        modalTitle: isEditMode
-          ? "Article updated and published"
-          : "Create article and published",
-        modalDescription: "Your article has been successfully published",
-      },
-    });
+    handleSave(2); // status_id = 2 (publish)
   };
 
   const handleDelete = () => {
     setShowDeleteModal(true);
   };
 
-  const handleConfirmDelete = () => {
-    
-    console.log("Delete article", articleId);
+  const handleConfirmDelete = async () => {
+    setIsLoading(true);
+    setError(null);
 
-    // Navigate with state to show modal on ArticleManagementPage
-    navigate("/admin/article-management", {
-      state: {
-        showModal: true,
-        modalTitle: "Article deleted",
-        modalDescription: "Your article has been successfully deleted",
-      },
-    });
+    try {
+      await postService.deletePost(articleId);
+
+      // Navigate with state to show modal on ArticleManagementPage
+      navigate("/admin/article-management", {
+        state: {
+          showModal: true,
+          modalTitle: "Article deleted",
+          modalDescription: "Your article has been successfully deleted",
+        },
+      });
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      setError(
+        error.response?.data?.message ||
+          "Failed to delete post. Please try again."
+      );
+      setShowDeleteModal(false);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancelDelete = () => {
@@ -140,11 +273,13 @@ export default function CreateArticlePage() {
             label: isEditMode ? "Save as draft" : "Save as draft",
             onClick: handleSaveDraft,
             variant: "secondary",
+            disabled: isLoading,
           },
           {
             label: isEditMode ? "Save" : "Save and publish",
             onClick: handleSaveAndPublish,
             variant: "primary",
+            disabled: isLoading,
           },
         ]}
       />
@@ -156,22 +291,50 @@ export default function CreateArticlePage() {
             Thumbnail image
           </label>
           <div className="flex gap-4">
-            <div className="flex h-[260px] w-[460px] items-center justify-center rounded-lg border border-dashed border-brown-300 bg-brown-200 py-3 px-4">
-              <div className="text-brown-400">
-                <ImageBoxIcon
-                  className="h-10 w-10"
-                  stroke="currentColor"
-                  fill="currentColor"
-                />
-              </div>
+            <div className="relative flex h-[260px] w-[460px] items-center justify-center overflow-hidden rounded-lg border border-dashed border-brown-300 bg-brown-200 py-3 px-4">
+              {imagePreview ? (
+                <>
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="absolute right-2 top-2 rounded-full bg-red-500 p-1 text-white transition-colors hover:bg-red-600"
+                    title="Remove image"
+                  >
+                    <TrashIcon className="h-4 w-4" stroke="currentColor" />
+                  </button>
+                </>
+              ) : (
+                <div className="text-brown-400">
+                  <ImageBoxIcon
+                    className="h-10 w-10"
+                    stroke="currentColor"
+                    fill="currentColor"
+                  />
+                </div>
+              )}
             </div>
             <div className="flex items-end">
-              <button
-                type="button"
-                className="h-12 rounded-full border border-brown-400 bg-white px-10 py-3 font-poppins text-base font-medium leading-6 text-brown-600 transition-colors hover:bg-brown-100"
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                onChange={handleFileChange}
+                className="hidden"
+                id="thumbnail-upload"
+              />
+              <label
+                htmlFor="thumbnail-upload"
+                className="h-12 cursor-pointer rounded-full border border-brown-400 bg-white px-10 py-3 font-poppins text-base font-medium leading-6 text-brown-600 transition-colors hover:bg-brown-100"
               >
-                Upload thumbnail image
-              </button>
+                {imagePreview
+                  ? "Change thumbnail image"
+                  : "Upload thumbnail image"}
+              </label>
             </div>
           </div>
         </div>
@@ -183,14 +346,14 @@ export default function CreateArticlePage() {
           </label>
           <div className="relative">
             <select
-              value={formData.category}
-              onChange={(e) => handleInputChange("category", e.target.value)}
+              value={formData.category_id}
+              onChange={(e) => handleInputChange("category_id", e.target.value)}
               className="h-12 w-full appearance-none rounded-lg border border-brown-300 bg-white py-3 pl-4 pr-3 font-poppins text-base font-medium leading-6 text-brown-500 focus:border-brown-400 focus:outline-none"
             >
               <option value="">Select category</option>
-              <option value="cat">Cat</option>
-              <option value="general">General</option>
-              <option value="inspiration">Inspiration</option>
+              <option value="1">Cat</option>
+              <option value="2">Inspiration</option>
+              <option value="3">General</option>
             </select>
             <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-brown-600">
               <ChevronDownIcon className="h-6 w-6" stroke="currentColor" />
@@ -260,6 +423,9 @@ export default function CreateArticlePage() {
           </div>
         )}
       </div>
+
+      {/* Error Popup */}
+      {error && <ErrorPopup message={error} onClose={() => setError(null)} />}
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal

@@ -3,6 +3,7 @@ import { body, validationResult } from "express-validator";
 export const createPostValidationRules = [
   body("title").trim().notEmpty().withMessage("Title is required"),
 
+  // image เป็น optional เพราะอาจจะส่ง imageFile แทน
   body("image").optional().isString().withMessage("Image must be a string"),
 
   body("category_id")
@@ -27,7 +28,8 @@ export const createPostValidationRules = [
 export const updatePostValidationRules = [
   body("title").trim().notEmpty().withMessage("Title is required"),
 
-  body("image").trim().notEmpty().withMessage("Image is required"),
+  // image เป็น optional เพราะอาจจะส่ง imageFile แทน (edit mode)
+  body("image").optional().isString().withMessage("Image must be a string"),
 
   body("category_id")
     .notEmpty()
