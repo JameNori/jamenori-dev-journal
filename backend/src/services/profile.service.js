@@ -94,3 +94,25 @@ export async function updateProfile(userId, data) {
 
   return result[0];
 }
+
+/**
+ * ดึงข้อมูล admin profile (public, ไม่ต้องมี token)
+ * ใช้กับ endpoint: GET /profiles/admin
+ */
+export async function getAdminProfile() {
+  const [admin] = await sql`
+    SELECT
+      name,
+      bio,
+      profile_pic
+    FROM users
+    WHERE role = 'admin'
+    LIMIT 1
+  `;
+
+  if (!admin) {
+    return null;
+  }
+
+  return admin;
+}

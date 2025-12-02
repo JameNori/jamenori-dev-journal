@@ -3,6 +3,7 @@ import multer from "multer";
 import {
   handleGetProfile,
   handleUpdateProfile,
+  handleGetAdminProfile,
 } from "../controllers/profile.controller.js";
 import {
   updateProfileValidationRules,
@@ -19,6 +20,9 @@ const multerUpload = multer({ storage: multer.memoryStorage() });
 const imageFileUpload = multerUpload.fields([
   { name: "imageFile", maxCount: 1 },
 ]);
+
+// Get admin profile (public, ไม่ต้องมี token)
+router.get("/admin", handleGetAdminProfile);
 
 // Get profile - ต้องมี protectUser
 router.get("/", protectUser, handleGetProfile);
