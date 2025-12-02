@@ -176,3 +176,33 @@ export const handleUpdateProfile = async (req, res) => {
     });
   }
 };
+
+/**
+ * GET /profiles/admin
+ * ดึงข้อมูล admin profile แบบ public (ไม่ต้องมี token)
+ * ใช้สำหรับแสดงใน HeroSection
+ */
+export const handleGetAdminProfile = async (req, res) => {
+  try {
+    const adminProfile = await profileService.getAdminProfile();
+
+    if (!adminProfile) {
+      return res.status(404).json({
+        message: "Admin profile not found",
+      });
+    }
+
+    return res.status(200).json({
+      name: adminProfile.name,
+      bio: adminProfile.bio,
+      profilePic: adminProfile.profile_pic,
+    });
+  } catch (error) {
+    console.error("Error reading admin profile:", error);
+
+    return res.status(500).json({
+      message: "Server could not read admin profile",
+      error: error.message,
+    });
+  }
+};
