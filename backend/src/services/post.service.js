@@ -33,6 +33,9 @@ export async function createPost(data) {
  * - limit   (default 6)
  * - category (optional, ใช้ category_id)
  * - keyword (optional, ค้นหา title/description/content)
+ *
+ * Response: category เป็นชื่อหมวดหมู่ (เช่น "Learning & Mindset")
+ * สอดคล้องกับ getPostById() ที่ส่ง category name เช่นกัน
  */
 export async function getAllPosts({ page = 1, limit = 6, category, keyword }) {
   // บังคับให้เป็น number
@@ -61,10 +64,17 @@ export async function getAllPosts({ page = 1, limit = 6, category, keyword }) {
   }
 
   // ประกอบ WHERE ถ้ามีเงื่อนไข
-  const whereSQL =
-    whereClauses.length > 0
-      ? sql`WHERE ${sql.join(whereClauses, sql` AND `)}`
-      : sql``;
+  // ใช้วิธี manual join แทน sql.join() เพราะ postgres package ไม่มี method นี้
+  let whereSQL = sql``;
+  if (whereClauses.length > 0) {
+    // รวม whereClauses ด้วย AND แบบ manual โดยใช้ reduce
+    whereSQL = whereClauses.reduce((acc, clause, index) => {
+      if (index === 0) {
+        return sql`WHERE ${clause}`;
+      }
+      return sql`${acc} AND ${clause}`;
+    }, sql``);
+  }
 
   // นับจำนวนโพสต์ทั้งหมดตามเงื่อนไข (ใช้สำหรับ totalPages)
   const countResult = await sql`
@@ -76,7 +86,7 @@ export async function getAllPosts({ page = 1, limit = 6, category, keyword }) {
   const totalPages = Math.ceil(totalPosts / limitNumber) || 1;
 
   // ดึงข้อมูลโพสต์จริง ตามหน้า + limit
-  // (ยังคงเลือก field เดิมเหมือน code เดิมของคุณ)
+  // JOIN กับ categories table เพื่อส่ง category name แทน category_id
   const posts = await sql`
     SELECT
       p.id,
@@ -84,11 +94,12 @@ export async function getAllPosts({ page = 1, limit = 6, category, keyword }) {
       p.image,
       p.description,
       p.content,
-      p.category_id,
+      c.name AS category,
       p.status_id,
       p.date,
       p.likes_count
     FROM posts p
+    LEFT JOIN categories c ON p.category_id = c.id
     ${whereSQL}
     ORDER BY p.id DESC
     LIMIT ${limitNumber} OFFSET ${offset}
