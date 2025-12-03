@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
 import { Input } from "./ui/input";
-import axios from "axios";
+import { postService } from "../services/post.service.js";
 
 export function MobileSearchBar() {
   const [query, setQuery] = useState("");
@@ -15,16 +15,11 @@ export function MobileSearchBar() {
     if (keyword.trim()) {
       try {
         setLoading(true);
-        const response = await axios.get(
-          "https://blog-post-project-api.vercel.app/posts",
-          {
-            params: {
-              keyword: keyword,
-              limit: 6,
-            },
-          }
-        );
-        setResults(response.data.posts);
+        const response = await postService.getAllPosts({
+          keyword: keyword,
+          limit: 6,
+        });
+        setResults(response.posts || []);
         setShowResults(true);
       } catch (error) {
         console.error("Search failed:", error);
