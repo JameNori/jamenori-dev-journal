@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
-import { NavBar } from "../components/NavBar";
+import { UserNavBar } from "../components/UserNavBar";
 import { Footer } from "../components/Footer";
 import { LoginModal } from "../components/LoginModal";
 import { formatDate } from "../lib/utils";
@@ -177,7 +177,7 @@ export default function ViewPostPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <NavBar />
+      <UserNavBar />
 
       <main className="mx-auto px-4 py-8 lg:px-[120px] lg:max-w-8xl">
         {/* Post Image */}

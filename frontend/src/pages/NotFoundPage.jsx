@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
-import { NavBar } from "../components/NavBar";
+import { UserNavBar } from "../components/UserNavBar";
 import { Footer } from "../components/Footer";
 
 export default function NotFoundPage() {
   return (
     <div className="min-h-screen bg-white">
-      <NavBar />
+      <UserNavBar />
 
       <main className="flex flex-col items-center justify-center min-h-[60vh] px-4">
         {/* Error Icon */}
