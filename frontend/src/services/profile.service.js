@@ -40,6 +40,12 @@ export const profileService = {
 
     return response.data;
   },
+
+  // Get admin profile (public, no token required)
+  getAdminProfile: async () => {
+    const response = await axios.get(`${API_URL}/profiles/admin`);
+    return response.data;
+  },
 };
 
 export default profileService;
