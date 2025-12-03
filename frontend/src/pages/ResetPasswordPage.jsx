@@ -1,18 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ProfileNavBar } from "../components/ProfileNavBar";
 import { ProfileSidebar } from "../components/ProfileSidebar";
 import { FormInput } from "../components/ui/FormInput";
 import { ProfileSuccessModal } from "../components/ui/ProfileSuccessModal";
+import { ErrorPopup } from "../components/ui/ErrorPopup";
 import { User } from "lucide-react";
 import { authService } from "../services/auth.service.js";
+import { profileService } from "../services/profile.service.js";
 
 export default function ResetPasswordPage() {
-  // Mock data - จะเปลี่ยนเป็น API call เมื่อ Backend พร้อม
-  const [userData] = useState({
-    name: "Jame Nori",
-    username: "jame.nori",
-    email: "jame_nori@hotmail.com",
-    avatar: "/src/assets/images/profile-cat.webp",
+  const [userData, setUserData] = useState({
+    name: "",
+    username: "",
+    email: "",
+    avatar: null,
   });
 
   const [formData, setFormData] = useState({
@@ -23,8 +24,44 @@ export default function ResetPasswordPage() {
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  // ดึงข้อมูล profile เมื่อ component mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        console.log("Fetching profile...");
+        const profile = await profileService.getProfile();
+        console.log("Profile data:", profile);
+
+        const profileData = {
+          name: profile.name || "",
+          username: profile.username || "",
+          email: profile.email || "",
+          avatar: profile.profilePic || null,
+        };
+
+        setUserData(profileData);
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        console.error("Error response:", error.response);
+        setError(
+          error.response?.data?.message ||
+            "Failed to load profile. Please try again."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -83,6 +120,7 @@ export default function ResetPasswordPage() {
   const handleConfirmReset = async () => {
     setShowConfirmModal(false);
     setIsSubmitting(true);
+    setError(null);
 
     try {
       // เรียก API reset password
@@ -107,14 +145,13 @@ export default function ResetPasswordPage() {
       }, 5000);
     } catch (error) {
       console.error("Password reset error:", error);
+      console.error("Error response:", error.response);
 
       const errorMessage =
         error?.response?.data?.error ||
         "Failed to reset password. Please try again.";
 
-      setErrors({
-        submit: errorMessage,
-      });
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -122,7 +159,10 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen bg-brown-100">
-      <ProfileNavBar userName={userData.name} userAvatar={userData.avatar} />
+      <ProfileNavBar
+        userName={userData.name || "Loading..."}
+        userAvatar={userData.avatar}
+      />
 
       <div className="lg:px-[120px] lg:py-12">
         <div className="mx-auto w-full max-w-[1120px] space-y-6 lg:space-y-8 bg-brown-100">
@@ -136,7 +176,7 @@ export default function ResetPasswordPage() {
                 {userData.avatar ? (
                   <img
                     src={userData.avatar}
-                    alt={userData.name}
+                    alt={userData.name || "Profile"}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -147,7 +187,7 @@ export default function ResetPasswordPage() {
               </div>
               <div className="flex min-w-0 items-center gap-4">
                 <span className="truncate font-poppins text-xl font-semibold leading-7 text-brown-400 lg:text-2xl lg:leading-8">
-                  {userData.name}
+                  {userData.name || "Loading..."}
                 </span>
                 <span className="flex items-center gap-4 whitespace-nowrap font-poppins text-xl font-semibold leading-7 text-brown-600 lg:text-2xl lg:leading-8">
                   <span className="h-7 border-l border-brown-300 lg:h-8" />
@@ -161,65 +201,84 @@ export default function ResetPasswordPage() {
             <ProfileSidebar className="hidden lg:block lg:w-[240px] lg:flex-none" />
 
             <main className="space-y-6 lg:w-[550px] lg:flex-none lg:space-y-8">
-              {/* Reset password form */}
-              <section className="w-full lg:rounded-2xl bg-brown-200 px-4 pb-10 pt-6 shadow-lg lg:px-10 lg:py-10">
-                <form
-                  onSubmit={handleSubmit}
-                  className="flex flex-col gap-6 lg:gap-7"
-                >
-                  <FormInput
-                    id="currentPassword"
-                    name="currentPassword"
-                    type="password"
-                    label="Current password"
-                    placeholder="Current password"
-                    value={formData.currentPassword}
-                    onChange={handleInputChange}
-                    error={errors.currentPassword}
-                    required
-                  />
-                  <FormInput
-                    id="newPassword"
-                    name="newPassword"
-                    type="password"
-                    label="New password"
-                    placeholder="New password"
-                    value={formData.newPassword}
-                    onChange={handleInputChange}
-                    error={errors.newPassword}
-                    required
-                  />
-                  <FormInput
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    label="Confirm new password"
-                    placeholder="Confirm new password"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    error={errors.confirmPassword}
-                    required
-                  />
+              {/* Error Popup */}
+              {error && (
+                <ErrorPopup message={error} onClose={() => setError(null)} />
+              )}
 
-                  {errors.submit && (
-                    <div className="text-center">
-                      <p className="font-poppins text-sm text-red">
-                        {errors.submit}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="flex justify-start">
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="flex h-12 w-[208px] items-center justify-center whitespace-nowrap rounded-full bg-brown-600 px-10 font-poppins text-base font-medium leading-6 text-white transition-colors duration-200 hover:bg-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {isSubmitting ? "Resetting..." : "Reset password"}
-                    </button>
+              {/* Loading State */}
+              {isLoading && !userData.name ? (
+                <section className="w-full lg:rounded-2xl bg-brown-200 px-4 pb-10 pt-6 shadow-lg lg:px-10 lg:py-10">
+                  <div className="flex items-center justify-center py-8">
+                    <p className="font-poppins text-base font-medium text-brown-400">
+                      Loading profile...
+                    </p>
                   </div>
-                </form>
-              </section>
+                </section>
+              ) : (
+                /* Reset password form */
+                <section className="w-full lg:rounded-2xl bg-brown-200 px-4 pb-10 pt-6 shadow-lg lg:px-10 lg:py-10">
+                  <form
+                    onSubmit={handleSubmit}
+                    className="flex flex-col gap-6 lg:gap-7"
+                  >
+                    <FormInput
+                      id="currentPassword"
+                      name="currentPassword"
+                      type="password"
+                      label="Current password"
+                      placeholder="Current password"
+                      value={formData.currentPassword}
+                      onChange={handleInputChange}
+                      error={errors.currentPassword}
+                      required
+                      disabled={isSubmitting || isLoading}
+                    />
+                    <FormInput
+                      id="newPassword"
+                      name="newPassword"
+                      type="password"
+                      label="New password"
+                      placeholder="New password"
+                      value={formData.newPassword}
+                      onChange={handleInputChange}
+                      error={errors.newPassword}
+                      required
+                      disabled={isSubmitting || isLoading}
+                    />
+                    <FormInput
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      label="Confirm new password"
+                      placeholder="Confirm new password"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      error={errors.confirmPassword}
+                      required
+                      disabled={isSubmitting || isLoading}
+                    />
+
+                    {errors.submit && (
+                      <div className="text-center">
+                        <p className="font-poppins text-sm text-red">
+                          {errors.submit}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex justify-start">
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || isLoading}
+                        className="flex h-12 w-[208px] items-center justify-center whitespace-nowrap rounded-full bg-brown-600 px-10 font-poppins text-base font-medium leading-6 text-white transition-colors duration-200 hover:bg-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isSubmitting ? "Resetting..." : "Reset password"}
+                      </button>
+                    </div>
+                  </form>
+                </section>
+              )}
             </main>
           </div>
         </div>
