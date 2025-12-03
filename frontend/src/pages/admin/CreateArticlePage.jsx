@@ -10,6 +10,7 @@ import { AdminTextarea } from "../../components/ui/AdminTextarea";
 import { ErrorPopup } from "../../components/ui/ErrorPopup";
 import { postService } from "../../services/post.service.js";
 import { authService } from "../../services/auth.service.js";
+import { categoryService } from "../../services/category.service.js";
 
 export default function CreateArticlePage() {
   const navigate = useNavigate();
@@ -30,7 +31,26 @@ export default function CreateArticlePage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [categories, setCategories] = useState([]);
   const fileInputRef = useRef(null);
+
+  // ดึงข้อมูล categories เมื่อ component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await categoryService.getAllCategories("");
+        console.log("Categories response:", response);
+        setCategories(response.categories || []);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        console.error("Error response:", error.response);
+        // ถ้า error ให้ใช้ array ว่าง
+        setCategories([]);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   // ดึงข้อมูล user เมื่อ component mount เพื่อใช้เป็น author name
   useEffect(() => {
@@ -53,24 +73,24 @@ export default function CreateArticlePage() {
   // Load article data when in edit mode
   useEffect(() => {
     const fetchArticle = async () => {
-      if (isEditMode && articleId) {
+      // รอให้ categories โหลดเสร็จก่อน (ถ้า categories ยังว่างอยู่)
+      if (isEditMode && articleId && categories.length > 0) {
         setIsLoading(true);
         setError(null);
 
         try {
           const article = await postService.getPostById(articleId);
 
-          // แปลง category name เป็น category_id
-          const categoryNameToId = {
-            Cat: 1,
-            Inspiration: 2,
-            General: 3,
-          };
+          // หา category_id จาก category name โดยใช้ categories ที่ดึงมาจาก API
+          const matchedCategory = categories.find(
+            (cat) => cat.name === article.category
+          );
+          const categoryId = matchedCategory ? matchedCategory.id : "";
 
           setFormData((prev) => ({
             ...prev,
             thumbnail: article.image || null,
-            category_id: categoryNameToId[article.category] || "",
+            category_id: categoryId,
             title: article.title || "",
             introduction: article.description || "",
             content: article.content || "",
@@ -93,7 +113,7 @@ export default function CreateArticlePage() {
     };
 
     fetchArticle();
-  }, [articleId, isEditMode]);
+  }, [articleId, isEditMode, categories]);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -381,9 +401,11 @@ export default function CreateArticlePage() {
               className="h-12 w-full appearance-none rounded-lg border border-brown-300 bg-white py-3 pl-4 pr-3 font-poppins text-base font-medium leading-6 text-brown-500 focus:border-brown-400 focus:outline-none"
             >
               <option value="">Select category</option>
-              <option value="1">Cat</option>
-              <option value="2">Inspiration</option>
-              <option value="3">General</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
             </select>
             <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-brown-600">
               <ChevronDownIcon className="h-6 w-6" stroke="currentColor" />

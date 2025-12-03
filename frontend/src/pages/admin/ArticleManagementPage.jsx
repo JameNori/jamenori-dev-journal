@@ -9,6 +9,7 @@ import { SuccessModal } from "../../components/ui/SuccessModal";
 import { ConfirmationModal } from "../../components/ui/ConfirmationModal";
 import { ErrorPopup } from "../../components/ui/ErrorPopup";
 import { postService } from "../../services/post.service.js";
+import { categoryService } from "../../services/category.service.js";
 
 export default function ArticleManagementPage() {
   const navigate = useNavigate();
@@ -22,9 +23,26 @@ export default function ArticleManagementPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState(null);
   const [articles, setArticles] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const searchTimeoutRef = useRef(null);
+
+  // ดึงข้อมูล categories เมื่อ component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await categoryService.getAllCategories("");
+        console.log("Categories response:", response);
+        setCategories(response.categories || []);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        setCategories([]);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   // Check for modal state from navigation
   useEffect(() => {
@@ -61,13 +79,13 @@ export default function ArticleManagementPage() {
 
       // เพิ่ม category filter
       if (categoryFilter !== "all") {
-        // แปลง category name เป็น category_id
-        const categoryMap = {
-          cat: 1,
-          inspiration: 2,
-          general: 3,
-        };
-        params.category = categoryMap[categoryFilter];
+        // หา category_id จาก category name โดยใช้ categories ที่ดึงมาจาก API
+        const matchedCategory = categories.find(
+          (cat) => cat.name.toLowerCase() === categoryFilter.toLowerCase()
+        );
+        if (matchedCategory) {
+          params.category = matchedCategory.id;
+        }
       }
 
       console.log("Fetching articles with params:", params);
@@ -82,19 +100,18 @@ export default function ArticleManagementPage() {
           2: "Published",
         };
 
-        // ตรวจสอบว่า backend return category name หรือ category_id
-        // จากที่ดู backend service, getAllPosts ไม่ return category name
-        // แต่ return category_id ดังนั้นต้อง map เอง
-        const categoryMap = {
-          1: "Cat",
-          2: "Inspiration",
-          3: "General",
-        };
+        // หา category name จาก category_id โดยใช้ categories ที่ดึงมาจาก API
+        const matchedCategory = categories.find(
+          (cat) => cat.id === post.category_id
+        );
+        const categoryName = matchedCategory
+          ? matchedCategory.name
+          : "Unknown";
 
         return {
           id: post.id,
           title: post.title,
-          category: categoryMap[post.category_id] || "Unknown",
+          category: categoryName,
           status: statusMap[post.status_id] || "Unknown",
         };
       });
@@ -151,7 +168,7 @@ export default function ArticleManagementPage() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, statusFilter, categoryFilter]);
+  }, [searchQuery, statusFilter, categoryFilter, categories]);
 
   const handleDeleteClick = (article) => {
     setArticleToDelete(article);
@@ -244,9 +261,11 @@ export default function ArticleManagementPage() {
                 className="h-12 w-[200px] appearance-none rounded-lg border border-brown-300 bg-white py-3 pl-4 pr-10 font-poppins text-base font-medium leading-6 text-brown-400 focus:border-brown-400 focus:outline-none"
               >
                 <option value="all">Category</option>
-                <option value="cat">Cat</option>
-                <option value="general">General</option>
-                <option value="inspiration">Inspiration</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.name.toLowerCase()}>
+                    {category.name}
+                  </option>
+                ))}
               </select>
               <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-brown-600">
                 <ChevronDownIcon className="h-6 w-6" stroke="currentColor" />
