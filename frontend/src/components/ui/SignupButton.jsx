@@ -7,7 +7,7 @@ export const SignupButton = ({
   ...props
 }) => {
   const baseClasses =
-    "rounded-full bg-brown-600 px-[42px] py-3 text-white transition-colors duration-200 hover:bg-brown-700 flex items-center justify-center";
+    "rounded-full bg-brown-600 px-[42px] text-white transition-colors duration-200 hover:bg-brown-700 flex items-center justify-center";
 
   const variantClasses = {
     desktop: "h-12 text-base",

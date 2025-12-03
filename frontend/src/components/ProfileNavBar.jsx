@@ -88,7 +88,7 @@ export function ProfileNavBar({ userName = "Moodeng ja", userAvatar }) {
             <div className="hidden items-center gap-4 lg:flex">
               <button
                 type="button"
-                className="transition-transform duration-200 hover:scale-105"
+                className="h-12 w-12 flex items-center justify-center transition-transform duration-200 hover:scale-105"
                 aria-label="Notifications"
               >
                 <NotificationBellIcon />
@@ -96,7 +96,7 @@ export function ProfileNavBar({ userName = "Moodeng ja", userAvatar }) {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-brown-200">
+                  <button className="flex items-center gap-2 rounded-lg transition-colors hover:bg-brown-200 h-12">
                     {userAvatar ? (
                       <img
                         src={userAvatar}
