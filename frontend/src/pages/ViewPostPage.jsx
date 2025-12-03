@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
-import axios from "axios";
 import { toast } from "sonner";
 import { NavBar } from "../components/NavBar";
 import { Footer } from "../components/Footer";
 import { LoginModal } from "../components/LoginModal";
 import { formatDate } from "../lib/utils";
+import { postService } from "../services/post.service.js";
+import { authService } from "../services/auth.service.js";
+import { profileService } from "../services/profile.service.js";
+import { tokenUtils } from "../utils/token.js";
 
 // Import SVG icons from assets
 import HappyIcon from "../assets/icons/happy_light.svg";
@@ -22,39 +25,94 @@ export default function ViewPostPage() {
   const [error, setError] = useState(null);
 
   // States สำหรับ Requirement #2
-  const [isLoggedIn] = useState(false); // Mock: always false สำหรับ assignment
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [adminProfile, setAdminProfile] = useState({
+    name: "Author",
+    bio: "",
+    profilePic: null,
+  });
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [likes, setLikes] = useState(0);
   const [comment, setComment] = useState("");
   const [showLoginModal, setShowLoginModal] = useState(false);
+
+  // ตรวจสอบ isLoggedIn จาก token
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      const hasToken = tokenUtils.hasToken();
+      setIsLoggedIn(hasToken);
+    };
+
+    checkLoginStatus();
+  }, []);
+
+  // ดึงข้อมูล admin profile
+  useEffect(() => {
+    const fetchAdminProfile = async () => {
+      try {
+        setIsLoadingProfile(true);
+        const profile = await profileService.getAdminProfile();
+        setAdminProfile({
+          name: profile.name || "Author",
+          bio: profile.bio || "",
+          profilePic: profile.profilePic || null,
+        });
+      } catch (error) {
+        console.error("Error fetching admin profile:", error);
+        // ใช้ default values ถ้า error
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+
+    fetchAdminProfile();
+  }, []);
 
   useEffect(() => {
     const fetchPost = async () => {
       try {
         setLoading(true);
-        // ใช้ API เดียวกันแต่หา post โดย ID
-        const response = await axios.get(
-          "https://blog-post-project-api.vercel.app/posts"
-        );
-        const foundPost = response.data.posts.find(
-          (p) => p.id === parseInt(postId)
-        );
+        setError(null);
 
-        if (foundPost) {
-          setPost(foundPost);
-          setLikes(foundPost.likes || 0);
+        console.log("Fetching post with ID:", postId);
+        const postData = await postService.getPostById(postId);
+        console.log("Post data:", postData);
+
+        if (postData) {
+          // แปลงข้อมูลจาก backend format เป็น frontend format
+          const formattedPost = {
+            id: postData.id,
+            image: postData.image,
+            category: postData.category || "General",
+            title: postData.title,
+            description: postData.description,
+            date: postData.date,
+            content: postData.content,
+            author: adminProfile.name, // ใช้ admin name จาก API
+            likes: postData.likes_count || 0,
+          };
+
+          setPost(formattedPost);
+          setLikes(formattedPost.likes);
         } else {
           setError("Post not found");
         }
       } catch (err) {
         console.error("Error fetching post:", err);
-        setError("Failed to fetch post");
+        console.error("Error response:", err.response);
+        setError(
+          err.response?.data?.message ||
+            "Failed to fetch post. Please try again."
+        );
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPost();
-  }, [postId]);
+    if (postId) {
+      fetchPost();
+    }
+  }, [postId, adminProfile.name]);
 
   // Functions สำหรับ Requirement #2
   const handleLike = () => {
@@ -112,9 +170,10 @@ export default function ViewPostPage() {
     );
   }
 
-  const formattedDate = post.date.includes("T")
-    ? formatDate(post.date)
-    : post.date;
+  const formattedDate =
+    post.date && post.date.includes("T")
+      ? formatDate(post.date)
+      : post.date || "Unknown date";
 
   return (
     <div className="min-h-screen bg-white">
@@ -165,28 +224,43 @@ export default function ViewPostPage() {
             <div className="lg:hidden mb-8">
               <div className="bg-brown-200 rounded-2xl p-6 border border-brown-200 shadow-sm">
                 <div className="flex items-center gap-4 mb-4">
-                  <img
-                    src={post.image}
-                    alt={post.author}
-                    className="w-16 h-16 rounded-full object-cover flex-shrink-0"
-                  />
+                  {isLoadingProfile || !adminProfile.profilePic ? (
+                    <div className="w-16 h-16 rounded-full bg-brown-300 animate-pulse flex-shrink-0"></div>
+                  ) : (
+                    <img
+                      src={adminProfile.profilePic}
+                      alt={adminProfile.name}
+                      className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+                    />
+                  )}
                   <div className="flex-1">
                     <h3 className="font-poppins text-xs font-medium text-brown-400 mb-1">
                       Author
                     </h3>
                     <p className="font-poppins text-xl font-semibold text-brown-500 leading-7">
-                      {post.author}
+                      {isLoadingProfile ? "Loading..." : adminProfile.name}
                     </p>
                   </div>
                 </div>
                 <div className="border-t border-brown-300 my-4"></div>
-                <p className="font-poppins text-base font-medium text-brown-400 leading-6">
-                  I am a pet enthusiast and freelance writer who specializes in
-                  animal behavior and care. With a deep love for cats, I enjoy
-                  sharing insights on feline companionship and wellness. When
-                  I'm not writing, I spends time volunteering at my local animal
-                  shelter, helping cats find loving homes.
-                </p>
+                {isLoadingProfile ? (
+                  <p className="font-poppins text-base font-medium text-brown-400 leading-6">
+                    Loading bio...
+                  </p>
+                ) : adminProfile.bio ? (
+                  adminProfile.bio.split("\n").map((paragraph, index) => (
+                    <p
+                      key={index}
+                      className="font-poppins text-base font-medium text-brown-400 leading-6"
+                    >
+                      {paragraph}
+                    </p>
+                  ))
+                ) : (
+                  <p className="font-poppins text-base font-medium text-brown-400 leading-6">
+                    No bio available.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -278,28 +352,43 @@ export default function ViewPostPage() {
           <div className="hidden lg:block lg:w-76 lg:flex-shrink-0">
             <div className="bg-brown-200 rounded-2xl p-6 border border-brown-200 shadow-sm lg:sticky lg:top-8">
               <div className="flex items-center gap-4 mb-4">
-                <img
-                  src={post.image}
-                  alt={post.author}
-                  className="w-16 h-16 rounded-full object-cover flex-shrink-0"
-                />
+                {isLoadingProfile || !adminProfile.profilePic ? (
+                  <div className="w-16 h-16 rounded-full bg-brown-300 animate-pulse flex-shrink-0"></div>
+                ) : (
+                  <img
+                    src={adminProfile.profilePic}
+                    alt={adminProfile.name}
+                    className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+                  />
+                )}
                 <div className="flex-1">
                   <h3 className="font-poppins text-xs font-medium text-brown-400 mb-1">
                     Author
                   </h3>
                   <p className="font-poppins text-xl font-semibold text-brown-500 leading-7">
-                    {post.author}
+                    {isLoadingProfile ? "Loading..." : adminProfile.name}
                   </p>
                 </div>
               </div>
               <div className="border-t border-brown-300 my-4"></div>
-              <p className="font-poppins text-base font-medium text-brown-400 leading-6">
-                I am a pet enthusiast and freelance writer who specializes in
-                animal behavior and care. With a deep love for cats, I enjoy
-                sharing insights on feline companionship and wellness. When I'm
-                not writing, I spends time volunteering at my local animal
-                shelter, helping cats find loving homes.
-              </p>
+              {isLoadingProfile ? (
+                <p className="font-poppins text-base font-medium text-brown-400 leading-6">
+                  Loading bio...
+                </p>
+              ) : adminProfile.bio ? (
+                adminProfile.bio.split("\n").map((paragraph, index) => (
+                  <p
+                    key={index}
+                    className="font-poppins text-base font-medium text-brown-400 leading-6"
+                  >
+                    {paragraph}
+                  </p>
+                ))
+              ) : (
+                <p className="font-poppins text-base font-medium text-brown-400 leading-6">
+                  No bio available.
+                </p>
+              )}
             </div>
           </div>
         </div>

@@ -1,4 +1,47 @@
+import { useState, useEffect } from "react";
+import { profileService } from "../services/profile.service.js";
+
 export function HeroSection() {
+  const [adminProfile, setAdminProfile] = useState({
+    name: "Loading...",
+    bio: "",
+    profilePic: null,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAdminProfile = async () => {
+      try {
+        setIsLoading(true);
+        const profile = await profileService.getAdminProfile();
+        setAdminProfile({
+          name: profile.name || "Author",
+          bio: profile.bio || "",
+          profilePic: profile.profilePic || null,
+        });
+      } catch (error) {
+        console.error("Error fetching admin profile:", error);
+        // ใช้ default values ถ้า error
+        setAdminProfile({
+          name: "Author",
+          bio: "",
+          profilePic: null,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAdminProfile();
+  }, []);
+
+  // แบ่ง bio เป็น paragraphs (ถ้ามี)
+  // ถ้า bio มี newline (\n) ให้แบ่งเป็น paragraphs
+  // ถ้าไม่มี ให้แสดงเป็น paragraph เดียว
+  const bioParagraphs = adminProfile.bio
+    ? adminProfile.bio.split("\n").filter((p) => p.trim())
+    : [];
+
   return (
     <section className="bg-brown-100">
       <div className="max-w-8xl mx-auto px-4 lg:px-[120px]">
@@ -41,11 +84,19 @@ export function HeroSection() {
           {/* Middle Column - Image */}
           <div className="flex justify-center">
             <div className="relative">
-              <img
-                src="/src/assets/images/16_9 img.png"
-                alt="Hero Image"
-                className="h-[470px] w-[343px] rounded-2xl object-cover lg:h-[529px] lg:w-[386px]"
-              />
+              {isLoading || !adminProfile.profilePic ? (
+                <div className="h-[470px] w-[343px] rounded-2xl bg-brown-200 animate-pulse flex items-center justify-center lg:h-[529px] lg:w-[386px]">
+                  <p className="font-poppins text-brown-400">
+                    Loading image...
+                  </p>
+                </div>
+              ) : (
+                <img
+                  src={adminProfile.profilePic}
+                  alt={adminProfile.name || "Hero Image"}
+                  className="h-[470px] w-[343px] rounded-2xl object-cover lg:h-[529px] lg:w-[386px]"
+                />
+              )}
             </div>
           </div>
 
@@ -55,18 +106,18 @@ export function HeroSection() {
               -Author
             </p>
             <h2 className="text-2xl font-poppins font-semibold leading-8 text-brown-500">
-              Thompson P.
+              {isLoading ? "Loading..." : adminProfile.name}
             </h2>
             <div className="space-y-3 text-base font-poppins font-medium leading-6 text-brown-400 lg:space-y-4">
-              <p>
-                I am a pet enthusiast and freelance writer who specializes in
-                animal behavior and care. With a deep love for cats, I enjoy
-                sharing insights on feline companionship and wellness.
-              </p>
-              <p>
-                When I'm not writing, I spends time volunteering at my local
-                animal shelter, helping cats find loving homes.
-              </p>
+              {isLoading ? (
+                <p>Loading bio...</p>
+              ) : bioParagraphs.length > 0 ? (
+                bioParagraphs.map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
+                ))
+              ) : (
+                <p>No bio available.</p>
+              )}
             </div>
           </div>
         </div>
