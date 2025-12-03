@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
-import { NavBar } from "../components/NavBar";
+import { UserNavBar } from "../components/UserNavBar";
 import { SuccessIcon } from "../components/icons/SuccessIcon";
 
 export default function SignupSuccessPage() {
   return (
     <div className="min-h-screen bg-brown-100">
-      <NavBar />
+      <UserNavBar />
 
       <main className="flex items-center justify-center bg-brown-100 min-h-[80vh] px-4 py-8">
         {/* Success Card */}

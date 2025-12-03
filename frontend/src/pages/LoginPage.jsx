@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { NavBar } from "../components/NavBar";
+import { UserNavBar } from "../components/UserNavBar";
 import { Footer } from "../components/Footer";
 import { FormInput } from "../components/ui/FormInput";
 import { ErrorPopup } from "../components/ui/ErrorPopup";
@@ -90,7 +90,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-brown-100">
-      <NavBar />
+      <UserNavBar />
 
       <main className="flex items-center justify-center bg-brown-100 min-h-[80vh] px-4 py-8">
         {/* Login Form Card */}

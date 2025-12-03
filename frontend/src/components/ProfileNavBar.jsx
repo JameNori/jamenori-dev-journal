@@ -1,5 +1,5 @@
 import { Menu, User, ChevronDown } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,8 +7,16 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { NotificationBellIcon } from "./icons/NotificationBellIcon";
+import { authService } from "../services/auth.service.js";
 
 export function ProfileNavBar({ userName = "Moodeng ja", userAvatar }) {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    authService.logout();
+    navigate("/");
+  };
+
   return (
     <nav className="bg-brown-100 border-b border-brown-300">
       <div className="px-6 py-3 lg:px-[120px] lg:py-4">
@@ -65,12 +73,12 @@ export function ProfileNavBar({ userName = "Moodeng ja", userAvatar }) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <Link
-                      to="/logout"
-                      className="w-full px-4 py-3 font-poppins text-base font-medium text-brown-600 hover:text-brown-700"
+                    <button
+                      onClick={handleLogout}
+                      className="w-full px-4 py-3 text-left font-poppins text-base font-medium text-brown-600 hover:text-brown-700"
                     >
                       Log out
-                    </Link>
+                    </button>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -80,7 +88,7 @@ export function ProfileNavBar({ userName = "Moodeng ja", userAvatar }) {
             <div className="hidden items-center gap-4 lg:flex">
               <button
                 type="button"
-                className="transition-transform duration-200 hover:scale-105"
+                className="h-12 w-12 flex items-center justify-center transition-transform duration-200 hover:scale-105"
                 aria-label="Notifications"
               >
                 <NotificationBellIcon />
@@ -88,7 +96,7 @@ export function ProfileNavBar({ userName = "Moodeng ja", userAvatar }) {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-brown-200">
+                  <button className="flex items-center gap-2 rounded-lg transition-colors hover:bg-brown-200 h-12">
                     {userAvatar ? (
                       <img
                         src={userAvatar}
@@ -119,12 +127,12 @@ export function ProfileNavBar({ userName = "Moodeng ja", userAvatar }) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <Link
-                      to="/logout"
-                      className="w-full font-poppins text-base font-medium text-brown-600 hover:text-brown-700"
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left font-poppins text-base font-medium text-brown-600 hover:text-brown-700"
                     >
                       Log out
-                    </Link>
+                    </button>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
