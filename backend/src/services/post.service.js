@@ -34,7 +34,9 @@ export async function createPost(data) {
  * - category (optional, ใช้ category_id)
  * - keyword (optional, ค้นหา title/description/content)
  *
- * Response: category เป็นชื่อหมวดหมู่ (เช่น "Learning & Mindset")
+ * Response:
+ * - category เป็นชื่อหมวดหมู่ (เช่น "Learning & Mindset")
+ * - category_id เป็น ID ของหมวดหมู่ (สำหรับ frontend ที่ต้องการ map ข้อมูล)
  * สอดคล้องกับ getPostById() ที่ส่ง category name เช่นกัน
  */
 export async function getAllPosts({ page = 1, limit = 6, category, keyword }) {
@@ -86,7 +88,7 @@ export async function getAllPosts({ page = 1, limit = 6, category, keyword }) {
   const totalPages = Math.ceil(totalPosts / limitNumber) || 1;
 
   // ดึงข้อมูลโพสต์จริง ตามหน้า + limit
-  // JOIN กับ categories table เพื่อส่ง category name แทน category_id
+  // JOIN กับ categories table เพื่อส่ง category name และ category_id
   const posts = await sql`
     SELECT
       p.id,
@@ -94,6 +96,7 @@ export async function getAllPosts({ page = 1, limit = 6, category, keyword }) {
       p.image,
       p.description,
       p.content,
+      p.category_id,
       c.name AS category,
       p.status_id,
       p.date,

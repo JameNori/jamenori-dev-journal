@@ -25,6 +25,7 @@ export default function ArticleManagementPage() {
   const [articles, setArticles] = useState([]);
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [error, setError] = useState(null);
   const searchTimeoutRef = useRef(null);
 
@@ -32,12 +33,15 @@ export default function ArticleManagementPage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
+        setIsLoadingCategories(true);
         const response = await categoryService.getAllCategories("");
         console.log("Categories response:", response);
         setCategories(response.categories || []);
       } catch (error) {
         console.error("Error fetching categories:", error);
         setCategories([]);
+      } finally {
+        setIsLoadingCategories(false);
       }
     };
 
@@ -104,9 +108,7 @@ export default function ArticleManagementPage() {
         const matchedCategory = categories.find(
           (cat) => cat.id === post.category_id
         );
-        const categoryName = matchedCategory
-          ? matchedCategory.name
-          : "Unknown";
+        const categoryName = matchedCategory ? matchedCategory.name : "Unknown";
 
         return {
           id: post.id,
@@ -146,6 +148,11 @@ export default function ArticleManagementPage() {
   // เรียก fetchArticles เมื่อ component mount และเมื่อ filter เปลี่ยน
   // ใช้ debounce สำหรับ search query เพื่อลดการเรียก API
   useEffect(() => {
+    // รอให้ categories โหลดเสร็จก่อน
+    if (isLoadingCategories) {
+      return; // ยังโหลด categories อยู่ ให้รอก่อน
+    }
+
     // Clear timeout ถ้ามี
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
@@ -168,7 +175,13 @@ export default function ArticleManagementPage() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, statusFilter, categoryFilter, categories]);
+  }, [
+    searchQuery,
+    statusFilter,
+    categoryFilter,
+    categories,
+    isLoadingCategories,
+  ]);
 
   const handleDeleteClick = (article) => {
     setArticleToDelete(article);
@@ -274,7 +287,7 @@ export default function ArticleManagementPage() {
           </div>
         </div>
 
-        {isLoading ? (
+        {isLoading || isLoadingCategories ? (
           <div className="py-10 text-center">
             <p className="font-poppins text-base text-brown-400">Loading...</p>
           </div>
