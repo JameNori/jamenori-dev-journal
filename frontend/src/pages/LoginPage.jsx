@@ -65,12 +65,19 @@ export default function LoginPage() {
       // Login สำเร็จ - ดึงข้อมูล user เพื่อเช็ค role
       const userData = await authService.getCurrentUser();
 
-      // Redirect ตาม role
+      // ตรวจสอบว่าเป็น admin หรือไม่ - ถ้าเป็น admin ให้ reject
       if (userData.role === "admin") {
-        navigate("/admin/article-management");
-      } else {
-        navigate("/");
+        setErrors({
+          submit: "Please use admin login page",
+          submitDescription:
+            "Admin accounts must login through the admin login page",
+        });
+        authService.logout(); // ลบ token
+        return;
       }
+
+      // Redirect ไปหน้า landing page (สำหรับ user เท่านั้น)
+      navigate("/");
     } catch (error) {
       console.error("Login error:", error);
 

@@ -73,8 +73,8 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Redirect ไปหน้า admin
-      navigate("/admin/article-management");
+      // Redirect ไปหน้า landing page
+      navigate("/");
     } catch (error) {
       console.error("Admin login error:", error);
 
