@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { NavBar } from "./NavBar";
 import { ProfileNavBar } from "./ProfileNavBar";
 import { tokenUtils } from "../utils/token.js";
-import { profileService } from "../services/profile.service.js";
+import { authService } from "../services/auth.service.js";
 
 export function UserNavBar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -11,6 +11,7 @@ export function UserNavBar() {
     name: "",
     avatar: null,
   });
+  const [userRole, setUserRole] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -20,16 +21,19 @@ export function UserNavBar() {
 
       if (hasToken) {
         try {
-          const profile = await profileService.getProfile();
+          // ใช้ getCurrentUser เพื่อดึง role, name, และ profilePic
+          const userData = await authService.getCurrentUser();
           setUserProfile({
-            name: profile.name || "",
-            avatar: profile.profilePic || null,
+            name: userData.name || "",
+            avatar: userData.profilePic || null,
           });
+          setUserRole(userData.role || null);
         } catch (error) {
-          console.error("Error fetching profile:", error);
+          console.error("Error fetching user data:", error);
           // ถ้า token หมดอายุหรือ invalid ให้ลบ token
           tokenUtils.removeToken();
           setIsLoggedIn(false);
+          setUserRole(null);
         }
       }
       setIsLoading(false);
@@ -78,6 +82,7 @@ export function UserNavBar() {
       <ProfileNavBar
         userName={userProfile.name || "User"}
         userAvatar={userProfile.avatar}
+        userRole={userRole}
       />
     );
   }

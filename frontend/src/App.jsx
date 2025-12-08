@@ -70,6 +70,7 @@ function App() {
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/signup/success" element={<SignupSuccessPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/profile/reset-password"
             element={<ResetPasswordPage />}
