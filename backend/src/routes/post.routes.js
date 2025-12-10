@@ -6,6 +6,10 @@ import {
   getPostById,
   updatePost,
   deletePost,
+  toggleLike,
+  checkUserLike,
+  getComments,
+  createComment,
 } from "../controllers/post.controller.js";
 import {
   createPostValidationRules,
@@ -13,6 +17,8 @@ import {
   validateRequest,
 } from "../validators/post.validators.js";
 import protectAdmin from "../middlewares/protectAdmin.js";
+import protectUser from "../middlewares/protectUser.js";
+import optionalAuth from "../middlewares/optionalAuth.js";
 
 const router = express.Router();
 
@@ -52,5 +58,17 @@ router.put(
 
 // Delete post - เพิ่ม protectAdmin
 router.delete("/:postId", protectAdmin, deletePost);
+
+// Like/Unlike post - ต้อง login
+router.post("/:postId/like", protectUser, toggleLike);
+
+// Check user like status - optional auth (ถ้าไม่มี token จะ return hasLiked: false)
+router.get("/:postId/like/status", optionalAuth, checkUserLike);
+
+// Get comments - public (ไม่ต้อง login)
+router.get("/:postId/comments", getComments);
+
+// Create comment - ต้อง login
+router.post("/:postId/comments", protectUser, createComment);
 
 export default router;
