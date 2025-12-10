@@ -311,3 +311,158 @@ export const deletePost = async (req, res) => {
     });
   }
 };
+
+/**
+ * Toggle Like/Unlike
+ * Endpoint: POST /posts/:postId/like
+ * Success: 200 + { likes_count, hasLiked }
+ * 401: ถ้าไม่มี token
+ * 404: ถ้าไม่เจอ post
+ */
+export const toggleLike = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Unauthorized: User authentication required",
+      });
+    }
+
+    // เช็คว่ามี post นี้หรือไม่
+    const post = await postService.getPostById(postId);
+    if (!post) {
+      return res.status(404).json({
+        message: "Server could not find a requested post",
+      });
+    }
+
+    const result = await postService.toggleLike(postId, userId);
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error toggling like:", error);
+
+    return res.status(500).json({
+      message: "Server could not toggle like because database connection",
+    });
+  }
+};
+
+/**
+ * Check User Like Status
+ * Endpoint: GET /posts/:postId/like/status
+ * Success: 200 + { hasLiked }
+ * 401: ถ้าไม่มี token (optional - ถ้าไม่มี token จะ return hasLiked: false)
+ */
+export const checkUserLike = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(200).json({
+        hasLiked: false,
+      });
+    }
+
+    const result = await postService.checkUserLike(postId, userId);
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error checking like status:", error);
+
+    return res.status(500).json({
+      message: "Server could not check like status because database connection",
+    });
+  }
+};
+
+/**
+ * Get Comments
+ * Endpoint: GET /posts/:postId/comments
+ * Success: 200 + { comments: [...] }
+ * 404: ถ้าไม่เจอ post
+ */
+export const getComments = async (req, res) => {
+  try {
+    const { postId } = req.params;
+
+    // เช็คว่ามี post นี้หรือไม่
+    const post = await postService.getPostById(postId);
+    if (!post) {
+      return res.status(404).json({
+        message: "Server could not find a requested post",
+      });
+    }
+
+    const comments = await postService.getComments(postId);
+
+    return res.status(200).json({
+      comments,
+    });
+  } catch (error) {
+    console.error("Error fetching comments:", error);
+
+    return res.status(500).json({
+      message: "Server could not fetch comments because database connection",
+    });
+  }
+};
+
+/**
+ * Create Comment
+ * Endpoint: POST /posts/:postId/comments
+ * Success: 201 + comment object
+ * 400: ถ้าข้อมูลไม่ครบ
+ * 401: ถ้าไม่มี token
+ * 404: ถ้าไม่เจอ post
+ */
+export const createComment = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { content } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Unauthorized: User authentication required",
+      });
+    }
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({
+        message: "Server could not create comment because content is required",
+      });
+    }
+
+    // เช็คว่ามี post นี้หรือไม่
+    const post = await postService.getPostById(postId);
+    if (!post) {
+      return res.status(404).json({
+        message: "Server could not find a requested post",
+      });
+    }
+
+    const comment = await postService.createComment(
+      postId,
+      userId,
+      content.trim()
+    );
+
+    if (!comment) {
+      return res.status(500).json({
+        message: "Server could not create comment",
+      });
+    }
+
+    return res.status(201).json(comment);
+  } catch (error) {
+    console.error("Error creating comment:", error);
+
+    return res.status(500).json({
+      message: "Server could not create comment because database connection",
+    });
+  }
+};
