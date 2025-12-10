@@ -214,3 +214,147 @@ export async function deletePost(postId) {
 
   return result[0]; // { id: ... }
 }
+
+/**
+ * Toggle like/unlike post
+ * ใช้กับ endpoint: POST /posts/:postId/like
+ * ถ้ามี like อยู่แล้วจะ unlike, ถ้ายังไม่มีจะ like
+ */
+export async function toggleLike(postId, userId) {
+  const postIdNum = Number(postId);
+
+  // เช็คว่ามี like อยู่แล้วหรือไม่
+  const existingLike = await sql`
+    SELECT id FROM post_likes
+    WHERE post_id = ${postIdNum} AND user_id = ${userId}
+    LIMIT 1;
+  `;
+
+  if (existingLike.length > 0) {
+    // ถ้ามี like อยู่แล้ว → unlike (ลบ like)
+    await sql`
+      DELETE FROM post_likes
+      WHERE post_id = ${postIdNum} AND user_id = ${userId}
+    `;
+
+    // ลด likes_count ใน posts table
+    await sql`
+      UPDATE posts
+      SET likes_count = GREATEST(likes_count - 1, 0)
+      WHERE id = ${postIdNum}
+    `;
+  } else {
+    // ถ้ายังไม่มี like → like (เพิ่ม like)
+    await sql`
+      INSERT INTO post_likes (post_id, user_id)
+      VALUES (${postIdNum}, ${userId})
+      ON CONFLICT (post_id, user_id) DO NOTHING
+    `;
+
+    // เพิ่ม likes_count ใน posts table
+    await sql`
+      UPDATE posts
+      SET likes_count = COALESCE(likes_count, 0) + 1
+      WHERE id = ${postIdNum}
+    `;
+  }
+
+  // ดึง likes_count ใหม่
+  const post = await sql`
+    SELECT likes_count FROM posts WHERE id = ${postIdNum} LIMIT 1
+  `;
+
+  return {
+    likes_count: post[0]?.likes_count || 0,
+    hasLiked: existingLike.length === 0, // ถ้าไม่มี like อยู่แล้ว = เพิ่ง like
+  };
+}
+
+/**
+ * เช็คสถานะ like ของ user สำหรับ post
+ * ใช้กับ endpoint: GET /posts/:postId/like/status
+ */
+export async function checkUserLike(postId, userId) {
+  const postIdNum = Number(postId);
+
+  const result = await sql`
+    SELECT id FROM post_likes
+    WHERE post_id = ${postIdNum} AND user_id = ${userId}
+    LIMIT 1;
+  `;
+
+  return {
+    hasLiked: result.length > 0,
+  };
+}
+
+/**
+ * ดึง comments ทั้งหมดของ post
+ * ใช้กับ endpoint: GET /posts/:postId/comments
+ */
+export async function getComments(postId) {
+  const postIdNum = Number(postId);
+
+  const comments = await sql`
+    SELECT 
+      c.id,
+      c.comment_text,
+      c.created_at,
+      c.user_id,
+      u.name,
+      u.profile_pic
+    FROM comments c
+    LEFT JOIN users u ON c.user_id = u.id
+    WHERE c.post_id = ${postIdNum}
+    ORDER BY c.created_at DESC
+  `;
+
+  return comments.map((comment) => ({
+    id: comment.id,
+    comment_id: comment.id, // สำหรับ backward compatibility
+    content: comment.comment_text, // Map comment_text to content for frontend
+    created_at: comment.created_at,
+    user: {
+      id: comment.user_id,
+      name: comment.name || "Anonymous",
+      profilePic: comment.profile_pic || null,
+    },
+  }));
+}
+
+/**
+ * สร้าง comment ใหม่
+ * ใช้กับ endpoint: POST /posts/:postId/comments
+ */
+export async function createComment(postId, userId, content) {
+  const postIdNum = Number(postId);
+
+  const result = await sql`
+    INSERT INTO comments (post_id, user_id, comment_text)
+    VALUES (${postIdNum}, ${userId}, ${content})
+    RETURNING id, comment_text, created_at, user_id;
+  `;
+
+  if (result.length === 0) {
+    return null;
+  }
+
+  const newComment = result[0];
+
+  // ดึง user info
+  const user = await sql`
+    SELECT name, profile_pic FROM users WHERE id = ${userId} LIMIT 1
+  `;
+
+  return {
+    id: newComment.id,
+    comment_id: newComment.id, // สำหรับ backward compatibility
+    content: newComment.comment_text, // Map comment_text to content for frontend
+    created_at: newComment.created_at,
+    user: {
+      id: newComment.user_id,
+      name: user[0]?.name || "Anonymous",
+      profilePic: user[0]?.profile_pic || null,
+    },
+  };
+}
