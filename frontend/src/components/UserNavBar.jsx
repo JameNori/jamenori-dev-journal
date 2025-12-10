@@ -40,6 +40,19 @@ export function UserNavBar() {
     };
 
     checkLoginAndFetchProfile();
+
+    // Listen to logout event
+    const handleLogout = () => {
+      setIsLoggedIn(false);
+      setUserProfile({ name: "", avatar: null });
+      setUserRole(null);
+    };
+
+    window.addEventListener('auth:logout', handleLogout);
+    
+    return () => {
+      window.removeEventListener('auth:logout', handleLogout);
+    };
   }, []);
 
   // แสดง loading skeleton ที่เป็นกลาง

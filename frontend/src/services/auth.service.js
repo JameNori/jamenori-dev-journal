@@ -73,6 +73,8 @@ export const authService = {
   // Logout
   logout: () => {
     tokenUtils.removeToken();
+    // Dispatch custom event เพื่อ notify components อื่นๆ
+    window.dispatchEvent(new CustomEvent('auth:logout'));
   },
 };
 

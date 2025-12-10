@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArticleIcon } from "./icons/ArticleIcon";
 import { FolderIcon } from "./icons/FolderIcon";
 import { ProfileIcon } from "./icons/ProfileIcon";
@@ -7,9 +7,11 @@ import { ResetIcon } from "./icons/ResetIcon";
 import { ExternalLinkIcon } from "./icons/ExternalLinkIcon";
 import { LogOutIcon } from "./icons/LogOutIcon";
 import hhLogo from "../assets/logos/hh..svg";
+import { authService } from "../services/auth.service.js";
 
 export function AdminSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const menuItems = [
     {
@@ -43,6 +45,11 @@ export function AdminSidebar() {
       active: location.pathname.startsWith("/admin/reset-password"),
     },
   ];
+
+  const handleLogout = () => {
+    authService.logout();
+    navigate("/");
+  };
 
   return (
     <aside className="flex h-[1024px] w-[280px] flex-col border-r border-brown-300 bg-brown-200 pt-4 pb-4">
@@ -83,9 +90,9 @@ export function AdminSidebar() {
           />
           <span>hh. website</span>
         </Link>
-        <Link
-          to="/admin/login"
-          className="flex items-center gap-3 rounded-lg px-4 py-3 font-poppins text-base font-medium leading-6 text-brown-400 transition-colors hover:bg-brown-200"
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 rounded-lg px-4 py-3 font-poppins text-base font-medium leading-6 text-brown-400 transition-colors hover:bg-brown-200 w-full text-left"
         >
           <LogOutIcon
             className="h-6 w-6"
@@ -93,7 +100,7 @@ export function AdminSidebar() {
             fill="currentColor"
           />
           <span>Log out</span>
-        </Link>
+        </button>
       </div>
     </aside>
   );

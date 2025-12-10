@@ -47,6 +47,18 @@ export default function ViewPostPage() {
     };
 
     checkLoginStatus();
+
+    // Listen to logout event
+    const handleLogout = () => {
+      setIsLoggedIn(false);
+      setHasLiked(false);
+    };
+
+    window.addEventListener("auth:logout", handleLogout);
+
+    return () => {
+      window.removeEventListener("auth:logout", handleLogout);
+    };
   }, []);
 
   // ดึงข้อมูล admin profile
