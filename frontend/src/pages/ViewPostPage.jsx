@@ -399,7 +399,6 @@ export default function ViewPostPage() {
                       ? "bg-brown-600 border-brown-600 hover:bg-brown-700"
                       : "bg-white border-brown-300 hover:bg-brown-100"
                   }`}
-                  disabled={!isLoggedIn}
                 >
                   <img
                     src={HappyIcon}
@@ -474,7 +473,6 @@ export default function ViewPostPage() {
                   onChange={(e) => setComment(e.target.value)}
                   placeholder="What are your thoughts?"
                   className="w-full h-[102px] pt-3 pr-1 pb-1 pl-4 border border-brown-300 rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-brown-200 mb-4 font-poppins text-base font-medium leading-6 text-brown-600 placeholder:text-brown-400"
-                  disabled={!isLoggedIn}
                   onFocus={() => {
                     if (!isLoggedIn) {
                       setShowLoginModal(true);
@@ -484,9 +482,7 @@ export default function ViewPostPage() {
                 <div className="flex justify-start lg:justify-end">
                   <button
                     onClick={handleComment}
-                    disabled={
-                      !isLoggedIn || isSubmittingComment || !comment.trim()
-                    }
+                    disabled={isSubmittingComment || !comment.trim()}
                     className="flex h-12 w-[121px] items-center justify-center rounded-full bg-brown-600 px-10 py-3 font-poppins text-base font-medium leading-6 text-white transition-colors hover:bg-brown-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmittingComment ? "Sending..." : "Send"}
