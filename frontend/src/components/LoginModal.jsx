@@ -6,7 +6,7 @@ export const LoginModal = ({ isOpen, onClose, onCreateAccount, onLogin }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-transparent" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Modal */}
       <div className="relative w-[343px] mx-4 rounded-2xl bg-brown-100 p-4 pt-4 pr-6 pb-10 pl-6 shadow-lg lg:w-[621px] lg:p-6 lg:pt-4 lg:pr-6 lg:pb-10 lg:pl-6">
