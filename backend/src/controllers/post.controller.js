@@ -1,4 +1,5 @@
 import * as postService from "../services/post.service.js";
+import * as notificationService from "../services/notification.service.js";
 import supabase from "../utils/supabase.js";
 
 /**
@@ -89,6 +90,7 @@ export const createPost = async (req, res) => {
     }
 
     // บันทึกข้อมูลโพสต์ลงในฐานข้อมูล
+    const userId = req.user?.id;
     await postService.createPost({
       title,
       image: imageUrl,
@@ -96,6 +98,7 @@ export const createPost = async (req, res) => {
       description,
       content,
       status_id,
+      user_id: userId,
     });
 
     return res.status(201).json({
@@ -340,6 +343,16 @@ export const toggleLike = async (req, res) => {
 
     const result = await postService.toggleLike(postId, userId);
 
+    // สร้าง notification เมื่อ like (ไม่ใช่ unlike)
+    if (result.hasLiked) {
+      try {
+        await notificationService.createLikeNotification(postId, userId);
+      } catch (error) {
+        // Log error แต่ไม่ให้ส่งผลต่อ response
+        console.error("Error creating like notification:", error);
+      }
+    }
+
     return res.status(200).json(result);
   } catch (error) {
     console.error("Error toggling like:", error);
@@ -455,6 +468,18 @@ export const createComment = async (req, res) => {
       return res.status(500).json({
         message: "Server could not create comment",
       });
+    }
+
+    // สร้าง notification สำหรับ comment
+    try {
+      await notificationService.createCommentNotification(
+        postId,
+        userId,
+        comment.id
+      );
+    } catch (error) {
+      // Log error แต่ไม่ให้ส่งผลต่อ response
+      console.error("Error creating comment notification:", error);
     }
 
     return res.status(201).json(comment);
