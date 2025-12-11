@@ -5,18 +5,27 @@ import sql from "../db/db.js";
  * ใช้กับ endpoint: POST /posts
  */
 export async function createPost(data) {
-  const { title, image, category_id, description, content, status_id } = data;
+  const {
+    title,
+    image,
+    category_id,
+    description,
+    content,
+    status_id,
+    user_id,
+  } = data;
 
   // ใช้ sql template literal เพื่อป้องกัน SQL injection
   const result = await sql`
-    INSERT INTO posts (title, image, category_id, description, content, status_id)
+    INSERT INTO posts (title, image, category_id, description, content, status_id, user_id)
     VALUES (
       ${title},
       ${image},
       ${Number(category_id)},
       ${description},
       ${content},
-      ${Number(status_id)}
+      ${Number(status_id)},
+      ${user_id || null}
     )
     RETURNING id;
   `;
@@ -257,6 +266,9 @@ export async function toggleLike(postId, userId) {
       SET likes_count = COALESCE(likes_count, 0) + 1
       WHERE id = ${postIdNum}
     `;
+
+    // สร้าง notification สำหรับ author (ถ้ามี)
+    // Note: notification จะถูกสร้างใน controller หลังจาก return result
   }
 
   // ดึง likes_count ใหม่
@@ -346,7 +358,7 @@ export async function createComment(postId, userId, content) {
     SELECT name, profile_pic FROM users WHERE id = ${userId} LIMIT 1
   `;
 
-  return {
+  const commentData = {
     id: newComment.id,
     comment_id: newComment.id, // สำหรับ backward compatibility
     content: newComment.comment_text, // Map comment_text to content for frontend
@@ -357,4 +369,8 @@ export async function createComment(postId, userId, content) {
       profilePic: user[0]?.profile_pic || null,
     },
   };
+
+  // Note: notification จะถูกสร้างใน controller หลังจาก return commentData
+
+  return commentData;
 }

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Menu, User, ChevronDown, RotateCcw, ExternalLink } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -8,11 +9,13 @@ import {
   DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
 import { NotificationBellIcon } from "./icons/NotificationBellIcon";
+import { NotificationDropdown } from "./NotificationDropdown";
 import { ProfileIcon } from "./icons/ProfileIcon";
 import { ResetIcon } from "./icons/ResetIcon";
 import { LogOutIcon } from "./icons/LogOutIcon";
 import { ExternalLinkIcon } from "./icons/ExternalLinkIcon";
 import { authService } from "../services/auth.service.js";
+import { notificationService } from "../services/notification.service.js";
 
 export function ProfileNavBar({
   userName = "Moodeng ja",
@@ -20,6 +23,33 @@ export function ProfileNavBar({
   userRole,
 }) {
   const navigate = useNavigate();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Fetch unread count on mount and set up polling (only for admin)
+  useEffect(() => {
+    // Only fetch notifications for admin users
+    if (userRole !== "admin") {
+      return;
+    }
+
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await notificationService.getUnreadCount();
+        setUnreadCount(response.count || 0);
+      } catch (error) {
+        console.error("Error fetching unread count:", error);
+        setUnreadCount(0);
+      }
+    };
+
+    // Fetch immediately
+    fetchUnreadCount();
+
+    // Set up polling every 30 seconds for real-time updates
+    const interval = setInterval(fetchUnreadCount, 30000);
+
+    return () => clearInterval(interval);
+  }, [userRole]);
 
   const handleLogout = () => {
     authService.logout();
@@ -85,13 +115,30 @@ export function ProfileNavBar({
                         {userName}
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      className="transition-transform duration-200 hover:scale-105"
-                      aria-label="Notifications"
-                    >
-                      <NotificationBellIcon iconClassName="!h-12 !w-12" />
-                    </button>
+                    {isAdmin && (
+                      <NotificationDropdown isMobile={true}>
+                        <button
+                          type="button"
+                          className="transition-transform duration-200 hover:scale-105"
+                          aria-label="Notifications"
+                        >
+                          <NotificationBellIcon
+                            iconClassName="!h-12 !w-12"
+                            hasUnread={unreadCount > 0}
+                          />
+                        </button>
+                      </NotificationDropdown>
+                    )}
+                    {!isAdmin && (
+                      <button
+                        type="button"
+                        className="transition-transform duration-200 hover:scale-105"
+                        aria-label="Notifications"
+                        disabled
+                      >
+                        <NotificationBellIcon iconClassName="!h-12 !w-12" />
+                      </button>
+                    )}
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Link
@@ -138,13 +185,26 @@ export function ProfileNavBar({
 
             {/* Desktop Notification & User */}
             <div className="hidden items-center gap-4 lg:flex">
-              <button
-                type="button"
-                className="h-12 w-12 flex items-center justify-center transition-transform duration-200 hover:scale-105"
-                aria-label="Notifications"
-              >
-                <NotificationBellIcon />
-              </button>
+              {isAdmin ? (
+                <NotificationDropdown>
+                  <button
+                    type="button"
+                    className="h-12 w-12 flex items-center justify-center transition-transform duration-200 hover:scale-105 relative"
+                    aria-label="Notifications"
+                  >
+                    <NotificationBellIcon hasUnread={unreadCount > 0} />
+                  </button>
+                </NotificationDropdown>
+              ) : (
+                <button
+                  type="button"
+                  className="h-12 w-12 flex items-center justify-center transition-transform duration-200 hover:scale-105 relative"
+                  aria-label="Notifications"
+                  disabled
+                >
+                  <NotificationBellIcon />
+                </button>
+              )}
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

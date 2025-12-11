@@ -6,6 +6,7 @@ import profileRoutes from "./routes/profile.routes.js";
 import postRoutes from "./routes/post.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 import sql from "./db/db.js";
 
 // Load environment variables
@@ -33,6 +34,9 @@ app.use("/posts", postRoutes);
 
 // Category routes
 app.use("/categories", categoryRoutes);
+
+// Notification routes
+app.use("/notifications", notificationRoutes);
 
 // ทดสอบการเชื่อมต่อฐานข้อมูล
 app.get("/test-db", async (req, res) => {
