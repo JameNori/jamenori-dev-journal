@@ -111,7 +111,7 @@ export async function getNotifications(userId, page = 1, limit = 10) {
       c.comment_text AS comment_content
     FROM notifications n
     INNER JOIN posts p ON n.post_id = p.id
-    INNER JOIN users u ON n.actor_user_id = u.id
+    LEFT JOIN users u ON n.actor_user_id = u.id
     LEFT JOIN comments c ON n.comment_id = c.id
     WHERE n.user_id = ${userId}
     ORDER BY n.created_at DESC
@@ -161,6 +161,209 @@ export async function getUnreadCount(userId) {
   `;
 
   return result[0]?.count ?? 0;
+}
+
+/**
+ * สร้าง notification เมื่อ admin สร้าง article ใหม่
+ * ส่ง notification ให้ทุก user
+ * @param {string} postId - ID ของ post ที่ admin สร้าง
+ * @param {string} adminId - ID ของ admin ที่สร้าง post
+ * @returns {Promise<number>} - จำนวน notifications ที่สร้างได้
+ */
+export async function createNewArticleNotification(postId, adminId) {
+  const postIdNum = Number(postId);
+
+  console.log("🔍 [createNewArticleNotification] Called with:", {
+    postId,
+    postIdType: typeof postId,
+    postIdNum,
+    postIdNumType: typeof postIdNum,
+    adminId,
+    adminIdType: typeof adminId,
+  });
+
+  // ดึงข้อมูล post
+  const post = await sql`
+    SELECT id, title FROM posts WHERE id = ${postIdNum} LIMIT 1
+  `;
+
+  console.log("🔍 [createNewArticleNotification] Post found:", post);
+  console.log("🔍 [createNewArticleNotification] Post length:", post.length);
+
+  if (post.length === 0) {
+    console.log(
+      "⚠️ [createNewArticleNotification] Post not found, returning 0"
+    );
+    return 0;
+  }
+
+  // ดึง user ทั้งหมด (ยกเว้น admin ที่สร้าง post)
+  const users = await sql`
+    SELECT id FROM users WHERE id != ${adminId}
+  `;
+
+  console.log(
+    "🔍 [createNewArticleNotification] Users found (excluding admin):",
+    {
+      count: users.length,
+      users: users,
+      adminId: adminId,
+    }
+  );
+
+  if (users.length === 0) {
+    console.log(
+      "⚠️ [createNewArticleNotification] No users found, returning 0"
+    );
+    return 0;
+  }
+
+  // Insert notifications ทีละแถว
+  let insertedCount = 0;
+  for (const user of users) {
+    try {
+      console.log(
+        `🔍 [createNewArticleNotification] Inserting notification for user:`,
+        {
+          userId: user.id,
+          userIdType: typeof user.id,
+          postId: postIdNum,
+          type: "new_article",
+          actorId: adminId,
+        }
+      );
+      await sql`
+        INSERT INTO notifications (user_id, post_id, type, actor_user_id)
+        VALUES (${user.id}, ${postIdNum}, ${"new_article"}, ${adminId})
+      `;
+      insertedCount++;
+      console.log(
+        `✅ [createNewArticleNotification] Inserted notification for user ${user.id}`
+      );
+    } catch (error) {
+      console.error(
+        `❌ [createNewArticleNotification] Error inserting notification for user ${user.id}:`,
+        error
+      );
+      console.error(`❌ [createNewArticleNotification] Error details:`, {
+        user_id: user.id,
+        user_id_type: typeof user.id,
+        post_id: postIdNum,
+        post_id_type: typeof postIdNum,
+        type: "new_article",
+        actor_user_id: adminId,
+        actor_user_id_type: typeof adminId,
+        error_message: error.message,
+        error_stack: error.stack,
+      });
+    }
+  }
+
+  console.log(
+    `✅ [createNewArticleNotification] Total notifications created: ${insertedCount}`
+  );
+  return insertedCount;
+}
+
+/**
+ * สร้าง notification เมื่อมี user comment บน post ที่ user อื่นเคย comment ไว้แล้ว
+ * ส่ง notification ให้ทุก user ที่เคย comment บน post นั้น (ยกเว้น user ที่ comment ใหม่)
+ * @param {string} postId - ID ของ post ที่ถูก comment
+ * @param {string} userId - ID ของ user ที่ comment ใหม่
+ * @param {number} commentId - ID ของ comment ที่สร้าง
+ * @returns {Promise<number>} - จำนวน notifications ที่สร้างได้
+ */
+export async function createCommentReplyNotification(
+  postId,
+  userId,
+  commentId
+) {
+  const postIdNum = Number(postId);
+  const commentIdNum = Number(commentId);
+
+  console.log("🔍 [createCommentReplyNotification] Called with:", {
+    postId,
+    postIdType: typeof postId,
+    postIdNum,
+    userId,
+    userIdType: typeof userId,
+    commentId,
+    commentIdType: typeof commentId,
+    commentIdNum,
+  });
+
+  // ดึง user ทั้งหมดที่เคย comment บน post นี้ (ยกเว้น user ที่ comment ใหม่)
+  const previousCommenters = await sql`
+    SELECT DISTINCT user_id
+    FROM comments
+    WHERE post_id = ${postIdNum} AND user_id != ${userId}
+  `;
+
+  console.log(
+    "🔍 [createCommentReplyNotification] Previous commenters found:",
+    {
+      count: previousCommenters.length,
+      commenters: previousCommenters,
+      postId: postIdNum,
+      currentUserId: userId,
+    }
+  );
+
+  if (previousCommenters.length === 0) {
+    console.log(
+      "⚠️ [createCommentReplyNotification] No previous commenters found, returning 0"
+    );
+    return 0;
+  }
+
+  // Insert notifications ทีละแถว
+  let insertedCount = 0;
+  for (const commenter of previousCommenters) {
+    try {
+      console.log(
+        `🔍 [createCommentReplyNotification] Inserting notification for user:`,
+        {
+          userId: commenter.user_id,
+          userIdType: typeof commenter.user_id,
+          postId: postIdNum,
+          type: "comment_reply",
+          actorId: userId,
+          commentId: commentIdNum,
+        }
+      );
+      await sql`
+        INSERT INTO notifications (user_id, post_id, type, actor_user_id, comment_id)
+        VALUES (${
+          commenter.user_id
+        }, ${postIdNum}, ${"comment_reply"}, ${userId}, ${commentIdNum})
+      `;
+      insertedCount++;
+      console.log(
+        `✅ [createCommentReplyNotification] Inserted notification for user ${commenter.user_id}`
+      );
+    } catch (error) {
+      console.error(
+        `❌ [createCommentReplyNotification] Error inserting notification for user ${commenter.user_id}:`,
+        error
+      );
+      console.error(`❌ [createCommentReplyNotification] Error details:`, {
+        user_id: commenter.user_id,
+        user_id_type: typeof commenter.user_id,
+        post_id: postIdNum,
+        type: "comment_reply",
+        actor_user_id: userId,
+        actor_user_id_type: typeof userId,
+        comment_id: commentIdNum,
+        error_message: error.message,
+        error_stack: error.stack,
+      });
+    }
+  }
+
+  console.log(
+    `✅ [createCommentReplyNotification] Total notifications created: ${insertedCount}`
+  );
+  return insertedCount;
 }
 
 /**
