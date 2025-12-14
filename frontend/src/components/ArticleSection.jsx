@@ -4,7 +4,9 @@ import { BlogCard } from "./BlogCard";
 import { SearchBar } from "./SearchBar";
 import { MobileSearchBar } from "./MobileSearchBar";
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { postService } from "../services/post.service.js";
+import { profileService } from "../services/profile.service.js";
+import { categoryService } from "../services/category.service.js";
 import {
   Select,
   SelectContent,
@@ -21,13 +23,10 @@ function ArticleSection() {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-
-  const categories = [
-    { name: "Highlight", isActive: true },
-    { name: "Cat", isActive: false },
-    { name: "Inspiration", isActive: false },
-    { name: "General", isActive: false },
-  ];
+  const [adminProfilePic, setAdminProfilePic] = useState(null);
+  const [categories, setCategories] = useState([
+    { name: "Highlight" }, // เริ่มต้นด้วย Highlight
+  ]);
 
   // ฟังก์ชันสำหรับดึงข้อมูลจาก API
   const fetchPosts = async (
@@ -51,39 +50,92 @@ function ArticleSection() {
       };
 
       // เพิ่ม category parameter ถ้าไม่ใช่ "Highlight"
+      // แปลง category name เป็น category_id โดยใช้ categories ที่ดึงมาจาก API
       if (category && category !== "Highlight") {
-        params.category = category;
+        const matchedCategory = categories.find((cat) => cat.name === category);
+        if (matchedCategory && matchedCategory.id) {
+          params.category = matchedCategory.id;
+        }
       }
 
-      const response = await axios.get(
-        "https://blog-post-project-api.vercel.app/posts",
-        {
-          params,
-        }
-      );
+      console.log("Fetching posts with params:", params);
+      const response = await postService.getAllPosts(params);
+      console.log("Posts response:", response);
+
+      // แปลงข้อมูลจาก backend format เป็น frontend format
+      const formattedPosts = response.posts.map((post) => ({
+        id: post.id,
+        image: post.image,
+        category: post.category || "General",
+        title: post.title,
+        description: post.description,
+        author: post.author || "Author", // ถ้า backend ไม่มี author ให้ใช้ default
+        date: post.date,
+      }));
 
       if (isLoadMore) {
         // รวมโพสต์ใหม่กับโพสต์เดิม
-        setPosts((prevPosts) => [...prevPosts, ...response.data.posts]);
+        setPosts((prevPosts) => [...prevPosts, ...formattedPosts]);
       } else {
         // แทนที่โพสต์เดิม
-        setPosts(response.data.posts);
+        setPosts(formattedPosts);
       }
 
       // ตรวจสอบว่าได้ข้อมูลหน้าสุดท้ายแล้วหรือยัง
-      if (response.data.currentPage >= response.data.totalPages) {
+      if (response.currentPage >= response.totalPages) {
         setHasMore(false);
       } else {
         setHasMore(true);
       }
     } catch (err) {
       console.error("Error fetching posts:", err);
-      setError("Failed to fetch posts");
+      console.error("Error response:", err.response);
+      setError(
+        err.response?.data?.message ||
+          "Failed to fetch posts. Please try again."
+      );
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
   };
+
+  // ดึงข้อมูล categories เมื่อ component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await categoryService.getAllCategories("");
+        console.log("Categories response:", response);
+        // เพิ่ม "Highlight" เข้าไปเป็นตัวแรก แล้วตามด้วย categories จาก API
+        const apiCategories = response.categories || [];
+        setCategories([
+          { name: "Highlight" }, // Highlight แสดงทุก category
+          ...apiCategories,
+        ]);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        // ถ้า error ให้ใช้แค่ Highlight
+        setCategories([{ name: "Highlight" }]);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // ดึงข้อมูล admin profile เมื่อ component mount
+  useEffect(() => {
+    const fetchAdminProfile = async () => {
+      try {
+        const profile = await profileService.getAdminProfile();
+        setAdminProfilePic(profile.profilePic || null);
+      } catch (error) {
+        console.error("Error fetching admin profile:", error);
+        // ใช้ null ถ้า error
+      }
+    };
+
+    fetchAdminProfile();
+  }, []);
 
   // ดึงข้อมูลเมื่อ component mount
   useEffect(() => {
@@ -201,6 +253,7 @@ function ArticleSection() {
                   description={post.description}
                   author={post.author}
                   date={post.date}
+                  authorProfilePic={adminProfilePic}
                 />
               ))}
             </div>

@@ -1,11 +1,12 @@
 export function NotificationBellIcon({
   className = "",
   iconClassName = "",
+  hasUnread = false,
   ...props
 }) {
   return (
     <span
-      className={`flex h-12 w-12 items-center justify-center rounded-full border border-brown-200 bg-white text-brown-400 ${className}`}
+      className={`relative flex h-12 w-12 items-center justify-center rounded-full border border-brown-200 bg-white text-brown-400 ${className}`}
       {...props}
     >
       <svg
@@ -24,6 +25,10 @@ export function NotificationBellIcon({
           strokeLinecap="round"
         />
       </svg>
+      {/* Unread indicator (red dot) */}
+      {hasUnread && (
+        <span className="absolute top-0 right-0 h-3 w-3 rounded-full bg-red border-2 border-white"></span>
+      )}
     </span>
   );
 }

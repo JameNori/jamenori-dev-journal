@@ -2,7 +2,16 @@ import { Link } from "react-router-dom";
 import { formatDate } from "../lib/utils";
 
 export function BlogCard(props) {
-  const { id, image, category, title, description, author, date } = props;
+  const {
+    id,
+    image,
+    category,
+    title,
+    description,
+    author,
+    date,
+    authorProfilePic,
+  } = props;
 
   // ตรวจสอบว่า date เป็น ISO string หรือไม่ และ format ให้เหมาะสม
   const formattedDate = date.includes("T") ? formatDate(date) : date;
@@ -34,7 +43,15 @@ export function BlogCard(props) {
           {description}
         </p>
         <div className="flex items-center text-sm">
-          <img className="mr-2 h-8 w-8 rounded-full" src={image} alt={author} />
+          {authorProfilePic ? (
+            <img
+              className="mr-2 h-8 w-8 rounded-full object-cover"
+              src={authorProfilePic}
+              alt={author}
+            />
+          ) : (
+            <div className="mr-2 h-8 w-8 rounded-full bg-brown-200 animate-pulse flex-shrink-0"></div>
+          )}
           <span className="font-poppins text-sm font-medium leading-[22px] text-brown-500">
             {author}
           </span>

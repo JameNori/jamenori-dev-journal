@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
-import axios from "axios";
 import { toast } from "sonner";
-import { NavBar } from "../components/NavBar";
+import { UserNavBar } from "../components/UserNavBar";
 import { Footer } from "../components/Footer";
 import { LoginModal } from "../components/LoginModal";
 import { formatDate } from "../lib/utils";
+import { postService } from "../services/post.service.js";
+import { authService } from "../services/auth.service.js";
+import { profileService } from "../services/profile.service.js";
+import { tokenUtils } from "../utils/token.js";
 
 // Import SVG icons from assets
 import HappyIcon from "../assets/icons/happy_light.svg";
@@ -22,56 +25,210 @@ export default function ViewPostPage() {
   const [error, setError] = useState(null);
 
   // States สำหรับ Requirement #2
-  const [isLoggedIn] = useState(false); // Mock: always false สำหรับ assignment
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [adminProfile, setAdminProfile] = useState({
+    name: "Author",
+    bio: "",
+    profilePic: null,
+  });
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [likes, setLikes] = useState(0);
+  const [hasLiked, setHasLiked] = useState(false);
   const [comment, setComment] = useState("");
+  const [comments, setComments] = useState([]);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+
+  // ตรวจสอบ isLoggedIn จาก token
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      const hasToken = tokenUtils.hasToken();
+      setIsLoggedIn(hasToken);
+    };
+
+    checkLoginStatus();
+
+    // Listen to logout event
+    const handleLogout = () => {
+      setIsLoggedIn(false);
+      setHasLiked(false);
+    };
+
+    window.addEventListener("auth:logout", handleLogout);
+
+    return () => {
+      window.removeEventListener("auth:logout", handleLogout);
+    };
+  }, []);
+
+  // ดึงข้อมูล admin profile
+  useEffect(() => {
+    const fetchAdminProfile = async () => {
+      try {
+        setIsLoadingProfile(true);
+        const profile = await profileService.getAdminProfile();
+        setAdminProfile({
+          name: profile.name || "Author",
+          bio: profile.bio || "",
+          profilePic: profile.profilePic || null,
+        });
+      } catch (error) {
+        console.error("Error fetching admin profile:", error);
+        // ใช้ default values ถ้า error
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+
+    fetchAdminProfile();
+  }, []);
 
   useEffect(() => {
     const fetchPost = async () => {
       try {
         setLoading(true);
-        // ใช้ API เดียวกันแต่หา post โดย ID
-        const response = await axios.get(
-          "https://blog-post-project-api.vercel.app/posts"
-        );
-        const foundPost = response.data.posts.find(
-          (p) => p.id === parseInt(postId)
-        );
+        setError(null);
 
-        if (foundPost) {
-          setPost(foundPost);
-          setLikes(foundPost.likes || 0);
+        console.log("Fetching post with ID:", postId);
+        const postData = await postService.getPostById(postId);
+        console.log("Post data:", postData);
+
+        if (postData) {
+          // แปลงข้อมูลจาก backend format เป็น frontend format
+          const formattedPost = {
+            id: postData.id,
+            image: postData.image,
+            category: postData.category || "General",
+            title: postData.title,
+            description: postData.description,
+            date: postData.date,
+            content: postData.content,
+            author: adminProfile.name, // ใช้ admin name จาก API
+            likes: postData.likes_count || 0,
+          };
+
+          setPost(formattedPost);
+          setLikes(formattedPost.likes);
         } else {
           setError("Post not found");
         }
       } catch (err) {
         console.error("Error fetching post:", err);
-        setError("Failed to fetch post");
+        console.error("Error response:", err.response);
+        setError(
+          err.response?.data?.message ||
+            "Failed to fetch post. Please try again."
+        );
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPost();
+    if (postId) {
+      fetchPost();
+    }
+  }, [postId, adminProfile.name]);
+
+  // Check if user has liked the post
+  useEffect(() => {
+    const checkLikeStatus = async () => {
+      if (!isLoggedIn || !postId) return;
+
+      try {
+        const likeStatus = await postService.checkUserLike(postId);
+        setHasLiked(likeStatus.hasLiked || false);
+      } catch (error) {
+        console.error("Error checking like status:", error);
+      }
+    };
+
+    checkLikeStatus();
+  }, [isLoggedIn, postId]);
+
+  // Fetch comments
+  useEffect(() => {
+    const fetchComments = async () => {
+      if (!postId) return;
+
+      try {
+        const commentsData = await postService.getComments(postId);
+        setComments(commentsData.comments || commentsData || []);
+      } catch (error) {
+        console.error("Error fetching comments:", error);
+        setComments([]);
+      }
+    };
+
+    fetchComments();
   }, [postId]);
 
   // Functions สำหรับ Requirement #2
-  const handleLike = () => {
+  const handleLike = async () => {
     if (!isLoggedIn) {
       setShowLoginModal(true);
       return;
     }
-    setLikes((prev) => prev + 1);
+
+    try {
+      const result = await postService.toggleLike(postId);
+
+      // Update like count and status
+      if (result.likes_count !== undefined) {
+        setLikes(result.likes_count);
+      } else {
+        // Fallback: toggle locally if backend doesn't return count
+        setLikes((prev) => (hasLiked ? prev - 1 : prev + 1));
+      }
+
+      setHasLiked((prev) => !prev);
+
+      toast.success(hasLiked ? "Removed like" : "Liked!", {
+        description: hasLiked
+          ? "You removed your like from this post."
+          : "You liked this post.",
+      });
+    } catch (error) {
+      console.error("Error toggling like:", error);
+      toast.error("Failed to like post", {
+        description: error.response?.data?.message || "Please try again.",
+      });
+    }
   };
 
-  const handleComment = () => {
+  const handleComment = async () => {
     if (!isLoggedIn) {
       setShowLoginModal(true);
       return;
     }
-    console.log("Comment submitted:", comment);
-    setComment("");
+
+    if (!comment.trim()) {
+      toast.error("Comment cannot be empty");
+      return;
+    }
+
+    setIsSubmittingComment(true);
+
+    try {
+      const newComment = await postService.createComment(
+        postId,
+        comment.trim()
+      );
+
+      // Add new comment to the list
+      setComments((prev) => [newComment, ...prev]);
+      setComment("");
+
+      toast.success("Comment posted!", {
+        description: "Your comment has been added.",
+      });
+    } catch (error) {
+      console.error("Error creating comment:", error);
+      toast.error("Failed to post comment", {
+        description: error.response?.data?.message || "Please try again.",
+      });
+    } finally {
+      setIsSubmittingComment(false);
+    }
   };
 
   const handleCopyLink = () => {
@@ -112,13 +269,51 @@ export default function ViewPostPage() {
     );
   }
 
-  const formattedDate = post.date.includes("T")
-    ? formatDate(post.date)
-    : post.date;
+  const formattedDate =
+    post.date && post.date.includes("T")
+      ? formatDate(post.date)
+      : post.date || "Unknown date";
+
+  // Helper function to format comment date with time (Thai timezone UTC+7)
+  // Always shows full date with time format: "12 September 2024 at 18:30"
+  const formatCommentDate = (dateString) => {
+    if (!dateString) return "";
+
+    try {
+      // Parse date from database
+      // Database stores time as TIMESTAMP WITHOUT TIME ZONE (local time UTC+7)
+      // But PostgreSQL/Supabase sends it as UTC string (with Z)
+      // We need to adjust by adding 7 hours to get the actual local time
+      let date = new Date(dateString);
+
+      // If the dateString has Z (UTC indicator), it means the database sent it as UTC
+      // But the actual stored time is local time (UTC+7), so we need to add 7 hours
+      if (typeof dateString === "string" && dateString.includes("Z")) {
+        // Add 7 hours (7 * 60 * 60 * 1000 milliseconds) to convert from UTC to Thai time
+        date = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+      }
+
+      // Always show full date with time in English format with Bangkok timezone
+      // Format: "12 September 2024 at 18:30"
+      const formattedDate = date.toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Asia/Bangkok",
+      });
+      // Replace comma with "at" to match Figma format: "12 September 2024 at 18:30"
+      return formattedDate.replace(",", " at");
+    } catch (error) {
+      console.error("Error formatting comment date:", error, dateString);
+      return "";
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
-      <NavBar />
+      <UserNavBar />
 
       <main className="mx-auto px-4 py-8 lg:px-[120px] lg:max-w-8xl">
         {/* Post Image */}
@@ -165,28 +360,43 @@ export default function ViewPostPage() {
             <div className="lg:hidden mb-8">
               <div className="bg-brown-200 rounded-2xl p-6 border border-brown-200 shadow-sm">
                 <div className="flex items-center gap-4 mb-4">
-                  <img
-                    src={post.image}
-                    alt={post.author}
-                    className="w-16 h-16 rounded-full object-cover flex-shrink-0"
-                  />
+                  {isLoadingProfile || !adminProfile.profilePic ? (
+                    <div className="w-16 h-16 rounded-full bg-brown-300 animate-pulse flex-shrink-0"></div>
+                  ) : (
+                    <img
+                      src={adminProfile.profilePic}
+                      alt={adminProfile.name}
+                      className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+                    />
+                  )}
                   <div className="flex-1">
                     <h3 className="font-poppins text-xs font-medium text-brown-400 mb-1">
                       Author
                     </h3>
                     <p className="font-poppins text-xl font-semibold text-brown-500 leading-7">
-                      {post.author}
+                      {isLoadingProfile ? "Loading..." : adminProfile.name}
                     </p>
                   </div>
                 </div>
                 <div className="border-t border-brown-300 my-4"></div>
-                <p className="font-poppins text-base font-medium text-brown-400 leading-6">
-                  I am a pet enthusiast and freelance writer who specializes in
-                  animal behavior and care. With a deep love for cats, I enjoy
-                  sharing insights on feline companionship and wellness. When
-                  I'm not writing, I spends time volunteering at my local animal
-                  shelter, helping cats find loving homes.
-                </p>
+                {isLoadingProfile ? (
+                  <p className="font-poppins text-base font-medium text-brown-400 leading-6">
+                    Loading bio...
+                  </p>
+                ) : adminProfile.bio ? (
+                  adminProfile.bio.split("\n").map((paragraph, index) => (
+                    <p
+                      key={index}
+                      className="font-poppins text-base font-medium text-brown-400 leading-6"
+                    >
+                      {paragraph}
+                    </p>
+                  ))
+                ) : (
+                  <p className="font-poppins text-base font-medium text-brown-400 leading-6">
+                    No bio available.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -196,10 +406,24 @@ export default function ViewPostPage() {
               <div className="w-full lg:w-auto">
                 <button
                   onClick={handleLike}
-                  className="flex items-center justify-center gap-[6px] px-[40px] py-[12px] h-[48px] w-full lg:w-auto rounded-full bg-white border border-brown-300 hover:bg-brown-100 transition-colors"
+                  className={`flex items-center justify-center gap-[6px] px-[40px] py-[12px] h-[48px] w-full lg:w-auto rounded-full border transition-colors ${
+                    hasLiked
+                      ? "bg-brown-600 border-brown-600 hover:bg-brown-700"
+                      : "bg-white border-brown-300 hover:bg-brown-100"
+                  }`}
                 >
-                  <img src={HappyIcon} alt="like" className="w-6 h-6" />
-                  <span className="font-poppins text-base font-medium text-brown-600 leading-6">
+                  <img
+                    src={HappyIcon}
+                    alt="like"
+                    className={`w-6 h-6 ${
+                      hasLiked ? "brightness-0 invert" : ""
+                    }`}
+                  />
+                  <span
+                    className={`font-poppins text-base font-medium leading-6 ${
+                      hasLiked ? "text-white" : "text-brown-600"
+                    }`}
+                  >
                     {likes}
                   </span>
                 </button>
@@ -254,22 +478,78 @@ export default function ViewPostPage() {
                 Comment
               </h3>
 
-              <div>
+              {/* Comment Input */}
+              <div className="mb-8">
                 <textarea
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   placeholder="What are your thoughts?"
                   className="w-full h-[102px] pt-3 pr-1 pb-1 pl-4 border border-brown-300 rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-brown-200 mb-4 font-poppins text-base font-medium leading-6 text-brown-600 placeholder:text-brown-400"
-                  onClick={handleComment}
+                  onFocus={() => {
+                    if (!isLoggedIn) {
+                      setShowLoginModal(true);
+                    }
+                  }}
                 />
                 <div className="flex justify-start lg:justify-end">
                   <button
                     onClick={handleComment}
-                    className="flex h-12 w-[121px] items-center justify-center rounded-full bg-brown-600 px-10 py-3 font-poppins text-base font-medium leading-6 text-white transition-colors hover:bg-brown-700"
+                    disabled={isSubmittingComment || !comment.trim()}
+                    className="flex h-12 w-[121px] items-center justify-center rounded-full bg-brown-600 px-10 py-3 font-poppins text-base font-medium leading-6 text-white transition-colors hover:bg-brown-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Send
+                    {isSubmittingComment ? "Sending..." : "Send"}
                   </button>
                 </div>
+              </div>
+
+              {/* Comments List */}
+              <div className="space-y-4 lg:space-y-6">
+                {comments.length === 0 ? (
+                  <p className="font-poppins text-base font-medium text-brown-400 leading-6 text-center py-8">
+                    No comments yet. Be the first to comment!
+                  </p>
+                ) : (
+                  comments.map((commentItem) => (
+                    <div
+                      key={commentItem.id || commentItem.comment_id}
+                      className="flex gap-3"
+                    >
+                      {/* User Avatar */}
+                      <div className="flex-shrink-0">
+                        {commentItem.user?.profilePic ? (
+                          <img
+                            src={commentItem.user.profilePic}
+                            alt={commentItem.user.name || "User"}
+                            className="w-11 h-11 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-11 h-11 rounded-full bg-brown-300 flex items-center justify-center">
+                            <span className="font-poppins text-sm font-medium text-brown-600">
+                              {(commentItem.user?.name || "U")[0].toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Comment Content */}
+                      <div className="flex-1">
+                        {/* Name and Timestamp - Vertical Stack */}
+                        <div className="mb-2 flex flex-col">
+                          <span className="font-poppins text-xl font-semibold leading-7 text-brown-500">
+                            {commentItem.user?.name || "Anonymous"}
+                          </span>
+                          <span className="font-poppins text-xs font-medium leading-5 text-brown-400">
+                            {formatCommentDate(commentItem.created_at)}
+                          </span>
+                        </div>
+                        {/* Comment Text */}
+                        <p className="font-poppins text-base font-medium leading-6 text-brown-400">
+                          {commentItem.content || commentItem.comment}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -278,28 +558,43 @@ export default function ViewPostPage() {
           <div className="hidden lg:block lg:w-76 lg:flex-shrink-0">
             <div className="bg-brown-200 rounded-2xl p-6 border border-brown-200 shadow-sm lg:sticky lg:top-8">
               <div className="flex items-center gap-4 mb-4">
-                <img
-                  src={post.image}
-                  alt={post.author}
-                  className="w-16 h-16 rounded-full object-cover flex-shrink-0"
-                />
+                {isLoadingProfile || !adminProfile.profilePic ? (
+                  <div className="w-16 h-16 rounded-full bg-brown-300 animate-pulse flex-shrink-0"></div>
+                ) : (
+                  <img
+                    src={adminProfile.profilePic}
+                    alt={adminProfile.name}
+                    className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+                  />
+                )}
                 <div className="flex-1">
                   <h3 className="font-poppins text-xs font-medium text-brown-400 mb-1">
                     Author
                   </h3>
                   <p className="font-poppins text-xl font-semibold text-brown-500 leading-7">
-                    {post.author}
+                    {isLoadingProfile ? "Loading..." : adminProfile.name}
                   </p>
                 </div>
               </div>
               <div className="border-t border-brown-300 my-4"></div>
-              <p className="font-poppins text-base font-medium text-brown-400 leading-6">
-                I am a pet enthusiast and freelance writer who specializes in
-                animal behavior and care. With a deep love for cats, I enjoy
-                sharing insights on feline companionship and wellness. When I'm
-                not writing, I spends time volunteering at my local animal
-                shelter, helping cats find loving homes.
-              </p>
+              {isLoadingProfile ? (
+                <p className="font-poppins text-base font-medium text-brown-400 leading-6">
+                  Loading bio...
+                </p>
+              ) : adminProfile.bio ? (
+                adminProfile.bio.split("\n").map((paragraph, index) => (
+                  <p
+                    key={index}
+                    className="font-poppins text-base font-medium text-brown-400 leading-6"
+                  >
+                    {paragraph}
+                  </p>
+                ))
+              ) : (
+                <p className="font-poppins text-base font-medium text-brown-400 leading-6">
+                  No bio available.
+                </p>
+              )}
             </div>
           </div>
         </div>

@@ -3,21 +3,58 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import profileRoutes from "./routes/profile.routes.js";
+import postRoutes from "./routes/post.routes.js";
+import authRoutes from "./routes/auth.routes.js";
+import categoryRoutes from "./routes/category.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
+import sql from "./db/db.js";
 
+// Load environment variables
 dotenv.config();
 
 const app = express();
 
+// Global middlewares
 app.use(cors());
 app.use(express.json());
 
-// Default route
+// Default health check route
 app.get("/", (req, res) => {
   res.send("Backend server is running!");
 });
 
-// Register profile routes
+// Auth routes
+app.use("/auth", authRoutes);
+
+// Profile routes
 app.use("/profiles", profileRoutes);
 
-export default app;
+// Post routes
+app.use("/posts", postRoutes);
 
+// Category routes
+app.use("/categories", categoryRoutes);
+
+// Notification routes
+app.use("/notifications", notificationRoutes);
+
+// ทดสอบการเชื่อมต่อฐานข้อมูล
+app.get("/test-db", async (req, res) => {
+  try {
+    const result = await sql`SELECT NOW() AS current_time`;
+    return res.status(200).json({
+      success: true,
+      message: "Database connected successfully!",
+      time: result[0].current_time,
+    });
+  } catch (error) {
+    console.error("TEST-DB ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Database connection failed",
+      error: error.message,
+    });
+  }
+});
+
+export default app;

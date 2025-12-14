@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { NavBar } from "../components/NavBar";
+import { Link, useNavigate } from "react-router-dom";
+import { UserNavBar } from "../components/UserNavBar";
 import { Footer } from "../components/Footer";
 import { FormInput } from "../components/ui/FormInput";
 import { ErrorPopup } from "../components/ui/ErrorPopup";
+import { authService } from "../services/auth.service.js";
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -57,22 +59,35 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      // TODO: Add actual login API call here
-      console.log("Login form submitted:", formData);
+      // เรียก API login
+      await authService.login(formData.email, formData.password);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Login สำเร็จ - ดึงข้อมูล user เพื่อเช็ค role
+      const userData = await authService.getCurrentUser();
 
-      // Simulate login failure for demonstration
-      // TODO: Remove this when implementing actual API call
-      throw new Error("Invalid credentials");
+      // ตรวจสอบว่าเป็น admin หรือไม่ - ถ้าเป็น admin ให้ reject
+      if (userData.role === "admin") {
+        setErrors({
+          submit: "Please use admin login page",
+          submitDescription:
+            "Admin accounts must login through the admin login page",
+        });
+        authService.logout(); // ลบ token
+        return;
+      }
 
-      // Success - redirect to dashboard or home
-      // navigate("/");
+      // Redirect ไปหน้า landing page (สำหรับ user เท่านั้น)
+      navigate("/");
     } catch (error) {
       console.error("Login error:", error);
+
+      // แสดง error จาก API
+      const errorMessage =
+        error?.response?.data?.error ||
+        "Your password is incorrect or this email doesn't exist";
+
       setErrors({
-        submit: "Your password is incorrect or this email doesn't exist",
+        submit: errorMessage,
         submitDescription: "Please try another password or email",
       });
     } finally {
@@ -82,7 +97,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-brown-100">
-      <NavBar />
+      <UserNavBar />
 
       <main className="flex items-center justify-center bg-brown-100 min-h-[80vh] px-4 py-8">
         {/* Login Form Card */}

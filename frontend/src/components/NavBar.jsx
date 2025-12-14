@@ -13,14 +13,14 @@ export function NavBar() {
     <nav className="bg-brown-100 border-b border-brown-300">
       <div className="px-6 py-3 lg:px-[120px] lg:py-4">
         <div className="flex h-full items-center justify-between">
-          {/* Left side - Sign up text and Logo */}
-          <div className="flex items-center gap-4">
+          {/* Left side - Logo */}
+          <Link to="/" className="flex items-center gap-4">
             <img
               src="/src/assets/logos/hh..svg"
               alt="hh. Logo"
               className="h-6 w-auto sm:h-7 md:h-8 lg:h-9"
             />
-          </div>
+          </Link>
 
           {/* Mobile Menu Button */}
           <div className="lg:hidden">
@@ -50,10 +50,10 @@ export function NavBar() {
           </div>
 
           {/* Desktop Navigation Buttons */}
-          <div className="hidden items-center space-x-4 lg:flex">
+          <div className="hidden items-center gap-4 lg:flex">
             <Link
               to="/login"
-              className="h-12 rounded-full border border-brown-400 bg-white px-10 py-3 text-base text-brown-400 transition-colors duration-200 hover:bg-gray-50 flex items-center justify-center"
+              className="h-12 rounded-full border border-brown-400 bg-white px-10 text-base text-brown-400 transition-colors duration-200 hover:bg-gray-50 flex items-center justify-center"
             >
               Log in
             </Link>
