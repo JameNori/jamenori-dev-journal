@@ -25,13 +25,8 @@ export function ProfileNavBar({
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Fetch unread count on mount and set up polling (only for admin)
+  // Fetch unread count on mount and set up polling (for all logged-in users)
   useEffect(() => {
-    // Only fetch notifications for admin users
-    if (userRole !== "admin") {
-      return;
-    }
-
     const fetchUnreadCount = async () => {
       try {
         const response = await notificationService.getUnreadCount();
@@ -49,7 +44,7 @@ export function ProfileNavBar({
     const interval = setInterval(fetchUnreadCount, 30000);
 
     return () => clearInterval(interval);
-  }, [userRole]);
+  }, []);
 
   const handleLogout = () => {
     authService.logout();
@@ -115,30 +110,18 @@ export function ProfileNavBar({
                         {userName}
                       </span>
                     </div>
-                    {isAdmin && (
-                      <NotificationDropdown isMobile={true}>
-                        <button
-                          type="button"
-                          className="transition-transform duration-200 hover:scale-105"
-                          aria-label="Notifications"
-                        >
-                          <NotificationBellIcon
-                            iconClassName="!h-12 !w-12"
-                            hasUnread={unreadCount > 0}
-                          />
-                        </button>
-                      </NotificationDropdown>
-                    )}
-                    {!isAdmin && (
+                    <NotificationDropdown isMobile={true} userRole={userRole}>
                       <button
                         type="button"
                         className="transition-transform duration-200 hover:scale-105"
                         aria-label="Notifications"
-                        disabled
                       >
-                        <NotificationBellIcon iconClassName="!h-12 !w-12" />
+                        <NotificationBellIcon
+                          iconClassName="!h-12 !w-12"
+                          hasUnread={unreadCount > 0}
+                        />
                       </button>
-                    )}
+                    </NotificationDropdown>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Link
@@ -185,26 +168,15 @@ export function ProfileNavBar({
 
             {/* Desktop Notification & User */}
             <div className="hidden items-center gap-4 lg:flex">
-              {isAdmin ? (
-                <NotificationDropdown>
-                  <button
-                    type="button"
-                    className="h-12 w-12 flex items-center justify-center transition-transform duration-200 hover:scale-105 relative"
-                    aria-label="Notifications"
-                  >
-                    <NotificationBellIcon hasUnread={unreadCount > 0} />
-                  </button>
-                </NotificationDropdown>
-              ) : (
+              <NotificationDropdown userRole={userRole}>
                 <button
                   type="button"
                   className="h-12 w-12 flex items-center justify-center transition-transform duration-200 hover:scale-105 relative"
                   aria-label="Notifications"
-                  disabled
                 >
-                  <NotificationBellIcon />
+                  <NotificationBellIcon hasUnread={unreadCount > 0} />
                 </button>
-              )}
+              </NotificationDropdown>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

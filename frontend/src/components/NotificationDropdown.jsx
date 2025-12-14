@@ -8,7 +8,11 @@ import {
 import { notificationService } from "../services/notification.service.js";
 import { formatTimeAgo } from "../lib/utils.js";
 
-export function NotificationDropdown({ children, isMobile = false }) {
+export function NotificationDropdown({
+  children,
+  isMobile = false,
+  userRole = null,
+}) {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -107,8 +111,10 @@ export function NotificationDropdown({ children, isMobile = false }) {
   const handleViewAllClick = () => {
     setIsOpen(false);
     // Only navigate to admin notification page if user is admin
-    // This will be handled by the parent component
-    navigate("/admin/notification");
+    if (userRole === "admin") {
+      navigate("/admin/notification");
+    }
+    // For regular users, there's no notification page, so do nothing
   };
 
   return (
@@ -164,18 +170,48 @@ export function NotificationDropdown({ children, isMobile = false }) {
                   {/* Notification Content */}
                   <div className="flex-1 flex flex-col gap-1 min-w-0">
                     <p className="font-poppins text-sm leading-5">
-                      <span className="font-bold text-brown-600">
-                        {notification.actor?.name || "Anonymous"}
-                      </span>{" "}
-                      <span className="font-medium text-brown-400">
-                        {notification.type === "comment"
-                          ? "Commented on your article"
-                          : "liked your article"}
-                      </span>
-                      :{" "}
-                      <span className="font-medium line-clamp-1 text-brown-400">
-                        {notification.post?.title || "Unknown article"}
-                      </span>
+                      {notification.type === "new_article" ? (
+                        <>
+                          <span className="font-bold text-brown-600">
+                            {notification.actor?.name || "Admin"}
+                          </span>{" "}
+                          <span className="font-medium text-brown-400">
+                            Published new article
+                          </span>
+                          :{" "}
+                          <span className="font-medium line-clamp-1 text-brown-400">
+                            {notification.post?.title || "Unknown article"}
+                          </span>
+                        </>
+                      ) : notification.type === "comment_reply" ? (
+                        <>
+                          <span className="font-bold text-brown-600">
+                            {notification.actor?.name || "Anonymous"}
+                          </span>{" "}
+                          <span className="font-medium text-brown-400">
+                            Comment on the article you have commented on
+                          </span>
+                          :{" "}
+                          <span className="font-medium line-clamp-1 text-brown-400">
+                            {notification.post?.title || "Unknown article"}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-bold text-brown-600">
+                            {notification.actor?.name || "Anonymous"}
+                          </span>{" "}
+                          <span className="font-medium text-brown-400">
+                            {notification.type === "comment"
+                              ? "Commented on your article"
+                              : "liked your article"}
+                          </span>
+                          :{" "}
+                          <span className="font-medium line-clamp-1 text-brown-400">
+                            {notification.post?.title || "Unknown article"}
+                          </span>
+                        </>
+                      )}
                     </p>
                     {notification.comment && (
                       <p className="font-poppins text-xs font-medium leading-5 text-brown-600 line-clamp-2">
@@ -188,13 +224,15 @@ export function NotificationDropdown({ children, isMobile = false }) {
                   </div>
                 </div>
               ))}
-              {/* View All Button */}
-              <button
-                onClick={handleViewAllClick}
-                className="mt-2 pt-2 border-t border-brown-300 text-center font-poppins text-sm font-medium text-brown-600 hover:text-brown-400 transition-colors"
-              >
-                View all notifications
-              </button>
+              {/* View All Button - Only show for admin */}
+              {userRole === "admin" && (
+                <button
+                  onClick={handleViewAllClick}
+                  className="mt-2 pt-2 border-t border-brown-300 text-center font-poppins text-sm font-medium text-brown-600 hover:text-brown-400 transition-colors"
+                >
+                  View all notifications
+                </button>
+              )}
             </>
           )}
         </div>
