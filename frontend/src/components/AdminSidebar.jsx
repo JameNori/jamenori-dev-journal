@@ -54,7 +54,9 @@ export function AdminSidebar() {
   return (
     <aside className="flex h-[1024px] w-[280px] flex-col border-r border-brown-300 bg-brown-200 pt-4 pb-4">
       <div className="flex flex-col gap-1 border-b border-brown-300 px-6 pb-[60px] pt-[60px]">
-        <img src={hhLogo} alt="hh. Logo" className="h-[60px] w-[60px]" />
+        <Link to="/">
+          <img src={hhLogo} alt="hh. Logo" className="h-[60px] w-[60px]" />
+        </Link>
         <p className="font-poppins text-xl font-semibold leading-6 text-orange">
           Admin panel
         </p>
