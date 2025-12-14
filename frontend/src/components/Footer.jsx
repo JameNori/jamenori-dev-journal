@@ -2,6 +2,7 @@
 import { LinkedinIcon } from "./icons/LinkedinIcon";
 import { GithubIcon } from "./icons/GithubIcon";
 import { GoogleIcon } from "./icons/GoogleIcon";
+import { Link } from "react-router-dom";
 
 export function Footer() {
   return (
@@ -33,12 +34,12 @@ export function Footer() {
 
           {/* Right side - Home page link */}
           <div className="flex justify-center lg:justify-end">
-            <a
-              href="#"
+            <Link
+              to="/"
               className="font-poppins text-base font-medium leading-6 text-brown-600 underline transition-colors hover:text-brown-700"
             >
               Home page
-            </a>
+            </Link>
           </div>
         </div>
       </div>
