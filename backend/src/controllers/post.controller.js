@@ -91,7 +91,11 @@ export const createPost = async (req, res) => {
 
     // บันทึกข้อมูลโพสต์ลงในฐานข้อมูล
     const userId = req.user?.id;
-    await postService.createPost({
+    console.log("🔍 [createPost] Debug - req.user:", req.user);
+    console.log("🔍 [createPost] Debug - userId:", userId);
+    console.log("🔍 [createPost] Debug - typeof userId:", typeof userId);
+
+    const postResult = await postService.createPost({
       title,
       image: imageUrl,
       category_id,
@@ -100,6 +104,57 @@ export const createPost = async (req, res) => {
       status_id,
       user_id: userId,
     });
+
+    console.log("🔍 [createPost] Debug - postResult:", postResult);
+    console.log("🔍 [createPost] Debug - postResult?.id:", postResult?.id);
+    console.log(
+      "🔍 [createPost] Debug - typeof postResult?.id:",
+      typeof postResult?.id
+    );
+    console.log("🔍 [createPost] Debug - userId check:", userId);
+    console.log("🔍 [createPost] Debug - Condition check:", {
+      hasPostId: !!postResult?.id,
+      hasUserId: !!userId,
+      willCreateNotification: !!(postResult?.id && userId),
+    });
+
+    // สร้าง notification ให้ทุก user เมื่อ admin สร้าง article ใหม่
+    if (postResult?.id && userId) {
+      console.log(
+        "🔍 [createPost] Calling createNewArticleNotification with:",
+        {
+          postId: postResult.id,
+          postIdType: typeof postResult.id,
+          adminId: userId,
+          adminIdType: typeof userId,
+        }
+      );
+      try {
+        const notificationCount =
+          await notificationService.createNewArticleNotification(
+            postResult.id,
+            userId
+          );
+        console.log(
+          "✅ [createPost] Created notifications count:",
+          notificationCount
+        );
+      } catch (error) {
+        // Log error แต่ไม่ให้ส่งผลต่อ response
+        console.error(
+          "❌ [createPost] Error creating new article notification:",
+          error
+        );
+        console.error("❌ [createPost] Error stack:", error.stack);
+      }
+    } else {
+      console.log("⚠️ [createPost] Skipping notification creation:", {
+        hasPostId: !!postResult?.id,
+        hasUserId: !!userId,
+        postId: postResult?.id,
+        userId: userId,
+      });
+    }
 
     return res.status(201).json({
       message: "Created post successfully",
@@ -472,7 +527,15 @@ export const createComment = async (req, res) => {
 
     // สร้าง notification สำหรับ comment
     try {
+      // ส่ง notification ให้ author ของ post
       await notificationService.createCommentNotification(
+        postId,
+        userId,
+        comment.id
+      );
+
+      // ส่ง notification ให้ทุก user ที่เคย comment บน post นี้
+      await notificationService.createCommentReplyNotification(
         postId,
         userId,
         comment.id
