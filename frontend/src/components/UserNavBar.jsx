@@ -4,6 +4,7 @@ import { NavBar } from "./NavBar";
 import { ProfileNavBar } from "./ProfileNavBar";
 import { tokenUtils } from "../utils/token.js";
 import { authService } from "../services/auth.service.js";
+import hhLogo from "../assets/logos/hh..svg";
 
 export function UserNavBar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -64,7 +65,7 @@ export function UserNavBar() {
             {/* Left side - Logo */}
             <Link to="/" className="flex items-center gap-4">
               <img
-                src="/src/assets/logos/hh..svg"
+                src={hhLogo}
                 alt="hh. Logo"
                 className="h-6 w-auto sm:h-7 md:h-8 lg:h-9"
               />
