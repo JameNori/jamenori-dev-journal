@@ -16,6 +16,7 @@ import { LogOutIcon } from "./icons/LogOutIcon";
 import { ExternalLinkIcon } from "./icons/ExternalLinkIcon";
 import { authService } from "../services/auth.service.js";
 import { notificationService } from "../services/notification.service.js";
+import hhLogo from "../assets/logos/hh..svg";
 
 export function ProfileNavBar({
   userName = "Moodeng ja",
@@ -69,7 +70,7 @@ export function ProfileNavBar({
           {/* Left side - Logo */}
           <Link to="/" className="flex items-center gap-4">
             <img
-              src="/src/assets/logos/hh..svg"
+              src={hhLogo}
               alt="hh. Logo"
               className="h-6 w-auto sm:h-7 md:h-8 lg:h-9"
             />

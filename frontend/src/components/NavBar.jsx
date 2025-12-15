@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { SignupButton } from "./ui/SignupButton";
+import hhLogo from "../assets/logos/hh..svg";
 
 export function NavBar() {
   return (
@@ -16,7 +17,7 @@ export function NavBar() {
           {/* Left side - Logo */}
           <Link to="/" className="flex items-center gap-4">
             <img
-              src="/src/assets/logos/hh..svg"
+              src={hhLogo}
               alt="hh. Logo"
               className="h-6 w-auto sm:h-7 md:h-8 lg:h-9"
             />
