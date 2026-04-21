@@ -1,6 +1,9 @@
 import * as postService from "../services/post.service.js";
 import * as notificationService from "../services/notification.service.js";
-import supabase from "../utils/supabase.js";
+import {
+  uploadImage,
+  ImageUploadError,
+} from "../services/imageUpload.service.js";
 
 /**
  * CREATE
@@ -23,62 +26,10 @@ export const createPost = async (req, res) => {
       });
     }
 
-    let imageUrl = image; // ใช้ image URL ที่ส่งมา (ถ้ามี)
+    let imageUrl = image;
 
-    // ถ้ามีไฟล์ใหม่ที่อัปโหลด → อัปโหลดไป Supabase Storage
-    if (req.files && req.files.imageFile && req.files.imageFile[0]) {
-      const file = req.files.imageFile[0];
-
-      // ตรวจสอบประเภทไฟล์
-      const allowedTypes = [
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/gif",
-        "image/webp",
-      ];
-      if (!allowedTypes.includes(file.mimetype)) {
-        return res.status(400).json({
-          message:
-            "Invalid file type. Please upload a valid image file (JPEG, PNG, GIF, WebP).",
-        });
-      }
-
-      // ตรวจสอบขนาดไฟล์ (5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (file.size > maxSize) {
-        return res.status(400).json({
-          message:
-            "File size too large. Please upload an image smaller than 5MB.",
-        });
-      }
-
-      // กำหนด bucket และ path ที่จะเก็บไฟล์ใน Supabase
-      const bucketName = "my-personal-blog";
-      const filePath = `posts/${Date.now()}_${file.originalname}`;
-
-      // อัปโหลดไฟล์ไปยัง Supabase Storage
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, file.buffer, {
-          contentType: file.mimetype,
-          upsert: false, // ป้องกันการเขียนทับไฟล์เดิม
-        });
-
-      if (error) {
-        console.error("Supabase Storage upload error:", error);
-        return res.status(500).json({
-          message: "Server could not upload image to storage",
-          error: error.message,
-        });
-      }
-
-      // ดึง URL สาธารณะของไฟล์ที่อัปโหลด
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(bucketName).getPublicUrl(data.path);
-
-      imageUrl = publicUrl;
+    if (req.files?.imageFile?.[0]) {
+      imageUrl = await uploadImage(req.files.imageFile[0], "posts");
     }
 
     // ถ้าไม่มี imageFile และไม่มี image URL → error
@@ -119,6 +70,10 @@ export const createPost = async (req, res) => {
       message: "Created post successfully",
     });
   } catch (err) {
+    if (err instanceof ImageUploadError) {
+      return res.status(err.statusCode).json({ message: err.message });
+    }
+
     console.error("Error creating post:", err);
 
     return res.status(500).json({
@@ -204,62 +159,10 @@ export const updatePost = async (req, res) => {
       });
     }
 
-    let imageUrl = image; // ใช้ image URL ที่ส่งมา (ถ้ามี)
+    let imageUrl = image;
 
-    // ถ้ามีไฟล์ใหม่ที่อัปโหลด → อัปโหลดไป Supabase Storage
-    if (req.files && req.files.imageFile && req.files.imageFile[0]) {
-      const file = req.files.imageFile[0];
-
-      // ตรวจสอบประเภทไฟล์
-      const allowedTypes = [
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/gif",
-        "image/webp",
-      ];
-      if (!allowedTypes.includes(file.mimetype)) {
-        return res.status(400).json({
-          message:
-            "Invalid file type. Please upload a valid image file (JPEG, PNG, GIF, WebP).",
-        });
-      }
-
-      // ตรวจสอบขนาดไฟล์ (5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (file.size > maxSize) {
-        return res.status(400).json({
-          message:
-            "File size too large. Please upload an image smaller than 5MB.",
-        });
-      }
-
-      // กำหนด bucket และ path ที่จะเก็บไฟล์ใน Supabase
-      const bucketName = "my-personal-blog";
-      const filePath = `posts/${Date.now()}_${file.originalname}`;
-
-      // อัปโหลดไฟล์ไปยัง Supabase Storage
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, file.buffer, {
-          contentType: file.mimetype,
-          upsert: false, // ป้องกันการเขียนทับไฟล์เดิม
-        });
-
-      if (error) {
-        console.error("Supabase Storage upload error:", error);
-        return res.status(500).json({
-          message: "Server could not upload image to storage",
-          error: error.message,
-        });
-      }
-
-      // ดึง URL สาธารณะของไฟล์ที่อัปโหลด
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(bucketName).getPublicUrl(data.path);
-
-      imageUrl = publicUrl;
+    if (req.files?.imageFile?.[0]) {
+      imageUrl = await uploadImage(req.files.imageFile[0], "posts");
     }
 
     // ถ้าไม่มี imageFile และไม่มี image URL → error
@@ -290,6 +193,10 @@ export const updatePost = async (req, res) => {
       message: "Updated post successfully",
     });
   } catch (error) {
+    if (error instanceof ImageUploadError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
     console.error("Error updating post:", error);
 
     return res.status(500).json({
