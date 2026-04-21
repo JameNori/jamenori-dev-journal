@@ -1,5 +1,4 @@
 import express from "express";
-import multer from "multer";
 import {
   handleGetProfile,
   handleUpdateProfile,
@@ -10,18 +9,10 @@ import {
   validateRequest,
 } from "../validators/profile.validators.js";
 import protectUser from "../middlewares/protectUser.js";
+import { imageFileUpload } from "../middlewares/upload.middleware.js";
 
 const router = express.Router();
 
-// ตั้งค่า Multer สำหรับการอัปโหลดไฟล์ (เก็บใน memory)
-const multerUpload = multer({ storage: multer.memoryStorage() });
-
-// กำหนดฟิลด์ที่จะรับไฟล์ (สามารถรับได้หลายฟิลด์)
-const imageFileUpload = multerUpload.fields([
-  { name: "imageFile", maxCount: 1 },
-]);
-
-// Get admin profile (public, ไม่ต้องมี token)
 router.get("/admin", handleGetAdminProfile);
 
 // Get profile - ต้องมี protectUser
@@ -34,7 +25,7 @@ router.put(
   protectUser,
   updateProfileValidationRules,
   validateRequest,
-  handleUpdateProfile
+  handleUpdateProfile,
 );
 
 export default router;

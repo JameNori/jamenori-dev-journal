@@ -1,5 +1,4 @@
 import express from "express";
-import multer from "multer";
 import {
   createPost,
   getAllPosts,
@@ -19,25 +18,17 @@ import {
 import protectAdmin from "../middlewares/protectAdmin.js";
 import protectUser from "../middlewares/protectUser.js";
 import optionalAuth from "../middlewares/optionalAuth.js";
+import { imageFileUpload } from "../middlewares/upload.middleware.js";
 
 const router = express.Router();
 
-// ตั้งค่า Multer สำหรับการอัปโหลดไฟล์ (เก็บใน memory)
-const multerUpload = multer({ storage: multer.memoryStorage() });
-
-// กำหนดฟิลด์ที่จะรับไฟล์ (สามารถรับได้หลายฟิลด์)
-const imageFileUpload = multerUpload.fields([
-  { name: "imageFile", maxCount: 1 },
-]);
-
-// Create - เพิ่ม multer middleware และ protectAdmin
 router.post(
   "/",
   imageFileUpload,
   protectAdmin,
   createPostValidationRules,
   validateRequest,
-  createPost
+  createPost,
 );
 
 // Get all (pagination + filter + search)
@@ -53,7 +44,7 @@ router.put(
   protectAdmin,
   updatePostValidationRules,
   validateRequest,
-  updatePost
+  updatePost,
 );
 
 // Delete post - เพิ่ม protectAdmin
