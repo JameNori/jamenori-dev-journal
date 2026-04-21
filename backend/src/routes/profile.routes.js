@@ -15,10 +15,8 @@ const router = express.Router();
 
 router.get("/admin", handleGetAdminProfile);
 
-// Get profile - ต้องมี protectUser
 router.get("/", protectUser, handleGetProfile);
 
-// Update profile - ต้องมี protectUser, multer, และ validation
 router.put(
   "/",
   imageFileUpload,
