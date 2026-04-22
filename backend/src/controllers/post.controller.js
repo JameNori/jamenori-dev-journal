@@ -18,21 +18,11 @@ export const createPost = async (req, res) => {
     const { title, image, category_id, description, content, status_id } =
       req.body;
 
-    // เช็ก required fields (ยกเว้น image เพราะอาจจะส่ง imageFile แทน)
-    if (!title || !category_id || !description || !content || !status_id) {
-      return res.status(400).json({
-        message:
-          "Server could not create post because there are missing data from client",
-      });
-    }
-
     let imageUrl = image;
-
     if (req.files?.imageFile?.[0]) {
       imageUrl = await uploadImage(req.files.imageFile[0], "posts");
     }
 
-    // ถ้าไม่มี imageFile และไม่มี image URL → error
     if (!imageUrl) {
       return res.status(400).json({
         message:
@@ -40,31 +30,15 @@ export const createPost = async (req, res) => {
       });
     }
 
-    // บันทึกข้อมูลโพสต์ลงในฐานข้อมูล
-    const userId = req.user?.id;
-
-    const postResult = await postService.createPost({
+    await postService.createArticle({
       title,
       image: imageUrl,
       category_id,
       description,
       content,
       status_id,
-      user_id: userId,
+      user_id: req.user?.id,
     });
-
-    // สร้าง notification ให้ทุก user เมื่อ admin สร้าง article ใหม่
-    if (postResult?.id && userId) {
-      try {
-        await notificationService.createNewArticleNotification(
-          postResult.id,
-          userId
-        );
-      } catch (error) {
-        // Log error แต่ไม่ให้ส่งผลต่อ response
-        console.error("Error creating new article notification:", error);
-      }
-    }
 
     return res.status(201).json({
       message: "Created post successfully",
@@ -151,21 +125,11 @@ export const updatePost = async (req, res) => {
     const { title, image, category_id, description, content, status_id } =
       req.body;
 
-    // เช็ก required fields (ยกเว้น image เพราะอาจจะส่ง imageFile แทน)
-    if (!title || !category_id || !description || !content || !status_id) {
-      return res.status(400).json({
-        message:
-          "Server could not update post because there are missing data from client",
-      });
-    }
-
     let imageUrl = image;
-
     if (req.files?.imageFile?.[0]) {
       imageUrl = await uploadImage(req.files.imageFile[0], "posts");
     }
 
-    // ถ้าไม่มี imageFile และไม่มี image URL → error
     if (!imageUrl) {
       return res.status(400).json({
         message:
@@ -173,7 +137,6 @@ export const updatePost = async (req, res) => {
       });
     }
 
-    // อัปเดตข้อมูลโพสต์ในฐานข้อมูล
     const updated = await postService.updatePost(postId, {
       title,
       image: imageUrl,

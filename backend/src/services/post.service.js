@@ -1,8 +1,8 @@
 import sql from "../db/db.js";
+import * as notificationService from "./notification.service.js";
 
 /**
- * สร้างโพสต์ใหม่ในตาราง posts
- * ใช้กับ endpoint: POST /posts
+ * สร้างโพสต์ใหม่ในตาราง posts (data access)
  */
 export async function createPost(data) {
   const {
@@ -30,8 +30,29 @@ export async function createPost(data) {
     RETURNING id;
   `;
 
-  // result เป็น array ของแถวที่ return มา (ไม่ใช่ result.rows แบบ pg)
-  return result[0]; // { id: ... }
+  return result[0];
+}
+
+/**
+ * สร้าง article (use-case): insert post + notify users เมื่อ admin สร้างบทความใหม่
+ * ใช้กับ endpoint: POST /posts
+ */
+export async function createArticle(data) {
+  const postResult = await createPost(data);
+
+  if (postResult?.id && data.user_id) {
+    try {
+      await notificationService.createNewArticleNotification(
+        postResult.id,
+        data.user_id,
+      );
+    } catch (error) {
+      // Log แต่ไม่ให้ส่งผลต่อ response — notification เป็น side effect
+      console.error("Error creating new article notification:", error);
+    }
+  }
+
+  return postResult;
 }
 
 /**
@@ -70,7 +91,7 @@ export async function getAllPosts({ page = 1, limit = 6, category, keyword }) {
         p.title ILIKE ${pattern} OR
         p.description ILIKE ${pattern} OR
         p.content ILIKE ${pattern}
-      )`
+      )`,
     );
   }
 
@@ -79,12 +100,15 @@ export async function getAllPosts({ page = 1, limit = 6, category, keyword }) {
   let whereSQL = sql``;
   if (whereClauses.length > 0) {
     // รวม whereClauses ด้วย AND แบบ manual โดยใช้ reduce
-    whereSQL = whereClauses.reduce((acc, clause, index) => {
-      if (index === 0) {
-        return sql`WHERE ${clause}`;
-      }
-      return sql`${acc} AND ${clause}`;
-    }, sql``);
+    whereSQL = whereClauses.reduce(
+      (acc, clause, index) => {
+        if (index === 0) {
+          return sql`WHERE ${clause}`;
+        }
+        return sql`${acc} AND ${clause}`;
+      },
+      sql``,
+    );
   }
 
   // นับจำนวนโพสต์ทั้งหมดตามเงื่อนไข (ใช้สำหรับ totalPages)
