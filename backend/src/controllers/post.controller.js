@@ -1,5 +1,4 @@
 import * as postService from "../services/post.service.js";
-import * as notificationService from "../services/notification.service.js";
 import {
   uploadImage,
   ImageUploadError,
@@ -217,24 +216,12 @@ export const toggleLike = async (req, res) => {
       });
     }
 
-    // เช็คว่ามี post นี้หรือไม่
-    const post = await postService.getPostById(postId);
-    if (!post) {
+    const result = await postService.likePost(postId, userId);
+
+    if (!result) {
       return res.status(404).json({
         message: "Server could not find a requested post",
       });
-    }
-
-    const result = await postService.toggleLike(postId, userId);
-
-    // สร้าง notification เมื่อ like (ไม่ใช่ unlike)
-    if (result.hasLiked) {
-      try {
-        await notificationService.createLikeNotification(postId, userId);
-      } catch (error) {
-        // Log error แต่ไม่ให้ส่งผลต่อ response
-        console.error("Error creating like notification:", error);
-      }
     }
 
     return res.status(200).json(result);
@@ -334,44 +321,16 @@ export const createComment = async (req, res) => {
       });
     }
 
-    // เช็คว่ามี post นี้หรือไม่
-    const post = await postService.getPostById(postId);
-    if (!post) {
-      return res.status(404).json({
-        message: "Server could not find a requested post",
-      });
-    }
-
-    const comment = await postService.createComment(
+    const comment = await postService.addComment(
       postId,
       userId,
       content.trim()
     );
 
     if (!comment) {
-      return res.status(500).json({
-        message: "Server could not create comment",
+      return res.status(404).json({
+        message: "Server could not find a requested post",
       });
-    }
-
-    // สร้าง notification สำหรับ comment
-    try {
-      // ส่ง notification ให้ author ของ post
-      await notificationService.createCommentNotification(
-        postId,
-        userId,
-        comment.id
-      );
-
-      // ส่ง notification ให้ทุก user ที่เคย comment บน post นี้
-      await notificationService.createCommentReplyNotification(
-        postId,
-        userId,
-        comment.id
-      );
-    } catch (error) {
-      // Log error แต่ไม่ให้ส่งผลต่อ response
-      console.error("Error creating comment notification:", error);
     }
 
     return res.status(201).json(comment);

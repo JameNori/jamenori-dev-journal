@@ -307,6 +307,29 @@ export async function toggleLike(postId, userId) {
 }
 
 /**
+ * Like/Unlike post + สร้าง notification เมื่อ like (use-case)
+ * ใช้กับ endpoint: POST /posts/:postId/like
+ * Return: null ถ้าไม่เจอ post, otherwise { likes_count, hasLiked }
+ */
+export async function likePost(postId, userId) {
+  const post = await getPostById(postId);
+  if (!post) return null;
+
+  const result = await toggleLike(postId, userId);
+
+  if (result.hasLiked) {
+    try {
+      await notificationService.createLikeNotification(postId, userId);
+    } catch (error) {
+      // notification เป็น side effect — ไม่ fail request
+      console.error("Error creating like notification:", error);
+    }
+  }
+
+  return result;
+}
+
+/**
  * เช็คสถานะ like ของ user สำหรับ post
  * ใช้กับ endpoint: GET /posts/:postId/like/status
  */
@@ -394,7 +417,38 @@ export async function createComment(postId, userId, content) {
     },
   };
 
-  // Note: notification จะถูกสร้างใน controller หลังจาก return commentData
-
   return commentData;
+}
+
+/**
+ * สร้าง comment + notification flow (use-case)
+ * ใช้กับ endpoint: POST /posts/:postId/comments
+ * Return: null ถ้าไม่เจอ post, otherwise comment object
+ */
+export async function addComment(postId, userId, content) {
+  const post = await getPostById(postId);
+  if (!post) return null;
+
+  const comment = await createComment(postId, userId, content);
+  if (!comment) {
+    throw new Error("Failed to create comment");
+  }
+
+  try {
+    await notificationService.createCommentNotification(
+      postId,
+      userId,
+      comment.id
+    );
+    await notificationService.createCommentReplyNotification(
+      postId,
+      userId,
+      comment.id
+    );
+  } catch (error) {
+    // notification เป็น side effect — ไม่ fail request
+    console.error("Error creating comment notification:", error);
+  }
+
+  return comment;
 }
