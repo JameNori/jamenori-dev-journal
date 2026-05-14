@@ -24,8 +24,8 @@ const router = express.Router();
 
 router.post(
   "/",
-  imageFileUpload,
   protectAdmin,
+  imageFileUpload,
   createPostValidationRules,
   validateRequest,
   createPost,
@@ -37,8 +37,8 @@ router.get("/:postId", getPostById);
 
 router.put(
   "/:postId",
-  imageFileUpload,
   protectAdmin,
+  imageFileUpload,
   updatePostValidationRules,
   validateRequest,
   updatePost,

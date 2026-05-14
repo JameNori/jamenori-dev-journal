@@ -19,8 +19,8 @@ router.get("/", protectUser, handleGetProfile);
 
 router.put(
   "/",
-  imageFileUpload,
   protectUser,
+  imageFileUpload,
   updateProfileValidationRules,
   validateRequest,
   handleUpdateProfile,
