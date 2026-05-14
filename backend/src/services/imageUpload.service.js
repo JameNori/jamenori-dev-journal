@@ -1,6 +1,8 @@
 import supabase from "../utils/supabase.js";
 
-const BUCKET_NAME = "my-personal-blog";
+// Fallback when env is unset — same default bucket as before (local/dev).
+const BUCKET_NAME =
+  process.env.SUPABASE_BUCKET_NAME || "my-personal-blog";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
