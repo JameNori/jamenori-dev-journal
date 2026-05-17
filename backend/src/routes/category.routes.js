@@ -15,13 +15,10 @@ import protectAdmin from "../middlewares/protectAdmin.js";
 
 const router = express.Router();
 
-// Get all categories (with search)
 router.get("/", getAllCategories);
 
-// Get one category
 router.get("/:categoryId", getCategoryById);
 
-// Create category - ต้องมี protectAdmin
 router.post(
   "/",
   protectAdmin,
@@ -30,7 +27,6 @@ router.post(
   createCategory
 );
 
-// Update category - ต้องมี protectAdmin
 router.put(
   "/:categoryId",
   protectAdmin,
@@ -39,7 +35,6 @@ router.put(
   updateCategory
 );
 
-// Delete category - ต้องมี protectAdmin
 router.delete("/:categoryId", protectAdmin, deleteCategory);
 
 export default router;

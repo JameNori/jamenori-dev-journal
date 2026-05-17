@@ -1,6 +1,8 @@
 import * as postService from "../services/post.service.js";
-import * as notificationService from "../services/notification.service.js";
-import supabase from "../utils/supabase.js";
+import {
+  uploadImage,
+  ImageUploadError,
+} from "../services/imageUpload.service.js";
 
 /**
  * CREATE
@@ -15,73 +17,11 @@ export const createPost = async (req, res) => {
     const { title, image, category_id, description, content, status_id } =
       req.body;
 
-    // เช็ก required fields (ยกเว้น image เพราะอาจจะส่ง imageFile แทน)
-    if (!title || !category_id || !description || !content || !status_id) {
-      return res.status(400).json({
-        message:
-          "Server could not create post because there are missing data from client",
-      });
+    let imageUrl = image;
+    if (req.files?.imageFile?.[0]) {
+      imageUrl = await uploadImage(req.files.imageFile[0], "posts");
     }
 
-    let imageUrl = image; // ใช้ image URL ที่ส่งมา (ถ้ามี)
-
-    // ถ้ามีไฟล์ใหม่ที่อัปโหลด → อัปโหลดไป Supabase Storage
-    if (req.files && req.files.imageFile && req.files.imageFile[0]) {
-      const file = req.files.imageFile[0];
-
-      // ตรวจสอบประเภทไฟล์
-      const allowedTypes = [
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/gif",
-        "image/webp",
-      ];
-      if (!allowedTypes.includes(file.mimetype)) {
-        return res.status(400).json({
-          message:
-            "Invalid file type. Please upload a valid image file (JPEG, PNG, GIF, WebP).",
-        });
-      }
-
-      // ตรวจสอบขนาดไฟล์ (5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (file.size > maxSize) {
-        return res.status(400).json({
-          message:
-            "File size too large. Please upload an image smaller than 5MB.",
-        });
-      }
-
-      // กำหนด bucket และ path ที่จะเก็บไฟล์ใน Supabase
-      const bucketName = "my-personal-blog";
-      const filePath = `posts/${Date.now()}_${file.originalname}`;
-
-      // อัปโหลดไฟล์ไปยัง Supabase Storage
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, file.buffer, {
-          contentType: file.mimetype,
-          upsert: false, // ป้องกันการเขียนทับไฟล์เดิม
-        });
-
-      if (error) {
-        console.error("Supabase Storage upload error:", error);
-        return res.status(500).json({
-          message: "Server could not upload image to storage",
-          error: error.message,
-        });
-      }
-
-      // ดึง URL สาธารณะของไฟล์ที่อัปโหลด
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(bucketName).getPublicUrl(data.path);
-
-      imageUrl = publicUrl;
-    }
-
-    // ถ้าไม่มี imageFile และไม่มี image URL → error
     if (!imageUrl) {
       return res.status(400).json({
         message:
@@ -89,77 +29,24 @@ export const createPost = async (req, res) => {
       });
     }
 
-    // บันทึกข้อมูลโพสต์ลงในฐานข้อมูล
-    const userId = req.user?.id;
-    console.log("🔍 [createPost] Debug - req.user:", req.user);
-    console.log("🔍 [createPost] Debug - userId:", userId);
-    console.log("🔍 [createPost] Debug - typeof userId:", typeof userId);
-
-    const postResult = await postService.createPost({
+    await postService.createArticle({
       title,
       image: imageUrl,
       category_id,
       description,
       content,
       status_id,
-      user_id: userId,
+      user_id: req.user?.id,
     });
-
-    console.log("🔍 [createPost] Debug - postResult:", postResult);
-    console.log("🔍 [createPost] Debug - postResult?.id:", postResult?.id);
-    console.log(
-      "🔍 [createPost] Debug - typeof postResult?.id:",
-      typeof postResult?.id
-    );
-    console.log("🔍 [createPost] Debug - userId check:", userId);
-    console.log("🔍 [createPost] Debug - Condition check:", {
-      hasPostId: !!postResult?.id,
-      hasUserId: !!userId,
-      willCreateNotification: !!(postResult?.id && userId),
-    });
-
-    // สร้าง notification ให้ทุก user เมื่อ admin สร้าง article ใหม่
-    if (postResult?.id && userId) {
-      console.log(
-        "🔍 [createPost] Calling createNewArticleNotification with:",
-        {
-          postId: postResult.id,
-          postIdType: typeof postResult.id,
-          adminId: userId,
-          adminIdType: typeof userId,
-        }
-      );
-      try {
-        const notificationCount =
-          await notificationService.createNewArticleNotification(
-            postResult.id,
-            userId
-          );
-        console.log(
-          "✅ [createPost] Created notifications count:",
-          notificationCount
-        );
-      } catch (error) {
-        // Log error แต่ไม่ให้ส่งผลต่อ response
-        console.error(
-          "❌ [createPost] Error creating new article notification:",
-          error
-        );
-        console.error("❌ [createPost] Error stack:", error.stack);
-      }
-    } else {
-      console.log("⚠️ [createPost] Skipping notification creation:", {
-        hasPostId: !!postResult?.id,
-        hasUserId: !!userId,
-        postId: postResult?.id,
-        userId: userId,
-      });
-    }
 
     return res.status(201).json({
       message: "Created post successfully",
     });
   } catch (err) {
+    if (err instanceof ImageUploadError) {
+      return res.status(err.statusCode).json({ message: err.message });
+    }
+
     console.error("Error creating post:", err);
 
     return res.status(500).json({
@@ -237,73 +124,11 @@ export const updatePost = async (req, res) => {
     const { title, image, category_id, description, content, status_id } =
       req.body;
 
-    // เช็ก required fields (ยกเว้น image เพราะอาจจะส่ง imageFile แทน)
-    if (!title || !category_id || !description || !content || !status_id) {
-      return res.status(400).json({
-        message:
-          "Server could not update post because there are missing data from client",
-      });
+    let imageUrl = image;
+    if (req.files?.imageFile?.[0]) {
+      imageUrl = await uploadImage(req.files.imageFile[0], "posts");
     }
 
-    let imageUrl = image; // ใช้ image URL ที่ส่งมา (ถ้ามี)
-
-    // ถ้ามีไฟล์ใหม่ที่อัปโหลด → อัปโหลดไป Supabase Storage
-    if (req.files && req.files.imageFile && req.files.imageFile[0]) {
-      const file = req.files.imageFile[0];
-
-      // ตรวจสอบประเภทไฟล์
-      const allowedTypes = [
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/gif",
-        "image/webp",
-      ];
-      if (!allowedTypes.includes(file.mimetype)) {
-        return res.status(400).json({
-          message:
-            "Invalid file type. Please upload a valid image file (JPEG, PNG, GIF, WebP).",
-        });
-      }
-
-      // ตรวจสอบขนาดไฟล์ (5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (file.size > maxSize) {
-        return res.status(400).json({
-          message:
-            "File size too large. Please upload an image smaller than 5MB.",
-        });
-      }
-
-      // กำหนด bucket และ path ที่จะเก็บไฟล์ใน Supabase
-      const bucketName = "my-personal-blog";
-      const filePath = `posts/${Date.now()}_${file.originalname}`;
-
-      // อัปโหลดไฟล์ไปยัง Supabase Storage
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, file.buffer, {
-          contentType: file.mimetype,
-          upsert: false, // ป้องกันการเขียนทับไฟล์เดิม
-        });
-
-      if (error) {
-        console.error("Supabase Storage upload error:", error);
-        return res.status(500).json({
-          message: "Server could not upload image to storage",
-          error: error.message,
-        });
-      }
-
-      // ดึง URL สาธารณะของไฟล์ที่อัปโหลด
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(bucketName).getPublicUrl(data.path);
-
-      imageUrl = publicUrl;
-    }
-
-    // ถ้าไม่มี imageFile และไม่มี image URL → error
     if (!imageUrl) {
       return res.status(400).json({
         message:
@@ -311,7 +136,6 @@ export const updatePost = async (req, res) => {
       });
     }
 
-    // อัปเดตข้อมูลโพสต์ในฐานข้อมูล
     const updated = await postService.updatePost(postId, {
       title,
       image: imageUrl,
@@ -331,6 +155,10 @@ export const updatePost = async (req, res) => {
       message: "Updated post successfully",
     });
   } catch (error) {
+    if (error instanceof ImageUploadError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
     console.error("Error updating post:", error);
 
     return res.status(500).json({
@@ -388,24 +216,12 @@ export const toggleLike = async (req, res) => {
       });
     }
 
-    // เช็คว่ามี post นี้หรือไม่
-    const post = await postService.getPostById(postId);
-    if (!post) {
+    const result = await postService.likePost(postId, userId);
+
+    if (!result) {
       return res.status(404).json({
         message: "Server could not find a requested post",
       });
-    }
-
-    const result = await postService.toggleLike(postId, userId);
-
-    // สร้าง notification เมื่อ like (ไม่ใช่ unlike)
-    if (result.hasLiked) {
-      try {
-        await notificationService.createLikeNotification(postId, userId);
-      } catch (error) {
-        // Log error แต่ไม่ให้ส่งผลต่อ response
-        console.error("Error creating like notification:", error);
-      }
     }
 
     return res.status(200).json(result);
@@ -505,44 +321,16 @@ export const createComment = async (req, res) => {
       });
     }
 
-    // เช็คว่ามี post นี้หรือไม่
-    const post = await postService.getPostById(postId);
-    if (!post) {
-      return res.status(404).json({
-        message: "Server could not find a requested post",
-      });
-    }
-
-    const comment = await postService.createComment(
+    const comment = await postService.addComment(
       postId,
       userId,
       content.trim()
     );
 
     if (!comment) {
-      return res.status(500).json({
-        message: "Server could not create comment",
+      return res.status(404).json({
+        message: "Server could not find a requested post",
       });
-    }
-
-    // สร้าง notification สำหรับ comment
-    try {
-      // ส่ง notification ให้ author ของ post
-      await notificationService.createCommentNotification(
-        postId,
-        userId,
-        comment.id
-      );
-
-      // ส่ง notification ให้ทุก user ที่เคย comment บน post นี้
-      await notificationService.createCommentReplyNotification(
-        postId,
-        userId,
-        comment.id
-      );
-    } catch (error) {
-      // Log error แต่ไม่ให้ส่งผลต่อ response
-      console.error("Error creating comment notification:", error);
     }
 
     return res.status(201).json(comment);
