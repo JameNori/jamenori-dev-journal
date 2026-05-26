@@ -1,5 +1,9 @@
 import * as profileService from "../services/profile.service.js";
 import supabase from "../utils/supabase.js";
+import {
+  uploadImage,
+  ImageUploadError,
+} from "../services/imageUpload.service.js";
 
 /**
  * GET /profiles
@@ -58,56 +62,10 @@ export const handleUpdateProfile = async (req, res) => {
     const userId = req.user.id; // ได้จาก protectUser หรือ protectAdmin middleware
     const { name, username, bio, image } = req.body;
 
-    let profilePicUrl = image; // ใช้ image URL ที่ส่งมา (ถ้ามี)
+    let profilePicUrl = image;
 
-    // ถ้ามีไฟล์ใหม่ที่อัปโหลด → อัปโหลดไป Supabase Storage
-    if (req.files && req.files.imageFile && req.files.imageFile[0]) {
-      const file = req.files.imageFile[0];
-
-      // ตรวจสอบประเภทไฟล์
-      const allowedTypes = [
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/gif",
-        "image/webp",
-      ];
-      if (!allowedTypes.includes(file.mimetype)) {
-        return res.status(400).json({
-          message: "Invalid file type. Only JPEG, PNG, GIF, WebP are allowed.",
-        });
-      }
-
-      // ตรวจสอบขนาดไฟล์ (5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (file.size > maxSize) {
-        return res.status(400).json({
-          message: "File size too large. Maximum 5MB is allowed.",
-        });
-      }
-
-      const bucketName = "my-personal-blog";
-      const filePath = `profiles/${Date.now()}_${file.originalname}`;
-
-      const { data, error: uploadError } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, file.buffer, {
-          contentType: file.mimetype,
-          upsert: false,
-        });
-
-      if (uploadError) {
-        console.error("Supabase upload error:", uploadError);
-        return res.status(500).json({
-          message: "Server could not upload image to storage",
-          error: uploadError.message,
-        });
-      }
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(bucketName).getPublicUrl(data.path);
-      profilePicUrl = publicUrl;
+    if (req.files?.imageFile?.[0]) {
+      profilePicUrl = await uploadImage(req.files.imageFile[0], "profiles");
     }
 
     // เตรียม data สำหรับ update
@@ -153,6 +111,10 @@ export const handleUpdateProfile = async (req, res) => {
       },
     });
   } catch (error) {
+    if (error instanceof ImageUploadError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
     console.error("Error updating profile:", error);
 
     if (error.message === "Username already exists") {
